@@ -1,0 +1,450 @@
+---
+title: Image Gallery
+description: Drag-and-drop image gallery component with reordering, rotation, and deletion capabilities
+---
+
+## Overview
+
+The `DraggableImageItem` component is part of an image gallery system that allows users to manage property images with drag-and-drop reordering, rotation, main image selection, and deletion marking.
+
+## Import
+
+```tsx
+import { DraggableImageItem } from "../components/DraggableImageItem";
+```
+
+## Props
+
+<ParamField path="image" type="PropertyImageMeta" required>
+  The image object containing metadata. See [PropertyImageMeta Type](#propertyimagemeta-type) below.
+</ParamField>
+
+<ParamField path="onDelete" type="(id: number) => void" required>
+  Callback function triggered when the delete button is clicked. Receives the image ID.
+</ParamField>
+
+<ParamField path="onSetMain" type="(id: number) => void" required>
+  Callback function triggered when setting an image as main. Receives the image ID.
+</ParamField>
+
+<ParamField path="onRotate" type="(id: number) => void" required>
+  Callback function triggered when the rotate button is clicked. Receives the image ID.
+</ParamField>
+
+<ParamField path="isMarkedForDeletion" type="boolean" required>
+  Whether the image is marked for deletion (affects button styling).
+</ParamField>
+
+<ParamField path="rotationAngle" type="number" required>
+  Current rotation angle in degrees (0, 90, 180, 270).
+</ParamField>
+
+<ParamField path="getImageFitClassForRotation" type="(rotation: number) => string" required>
+  Function that returns CSS classes for image fitting based on rotation count.
+</ParamField>
+
+## PropertyImageMeta Type
+
+```tsx
+interface PropertyImageMeta {
+  id: number;
+  url: string;
+  orderIndex: number;
+  isMain: boolean;
+  rotation?: number; // 0-3 (90° steps)
+}
+```
+
+<ParamField path="id" type="number">
+  Unique identifier for the image
+</ParamField>
+
+<ParamField path="url" type="string">
+  URL of the image
+</ParamField>
+
+<ParamField path="orderIndex" type="number">
+  Position in the gallery (0-based)
+</ParamField>
+
+<ParamField path="isMain" type="boolean">
+  Whether this is the main/featured image
+</ParamField>
+
+<ParamField path="rotation" type="number">
+  Rotation state (0-3, representing 90° increments)
+</ParamField>
+
+## Features
+
+### Drag and Drop
+
+Powered by `@dnd-kit/sortable`:
+- Drag images to reorder them
+- Visual feedback during drag (opacity, scale, shadow)
+- Cursor changes to `grab` and `grabbing`
+- Smooth transitions
+
+### Image Operations
+
+#### Delete/Undelete
+- Click the X button to mark for deletion
+- Click again to unmark
+- Visual feedback: Red background when marked
+- Actual deletion happens on form submit
+
+#### Set as Main
+- Click the star button to set as main image
+- Yellow badge when image is main
+- Automatically moves to position 1
+- Disabled when already main
+
+#### Rotate
+- Click rotate button to rotate 90° clockwise
+- Smooth rotation transition (0.3s ease)
+- Image fit classes adjust based on rotation
+- Supports 0°, 90°, 180°, 270° rotations
+
+### Visual Indicators
+
+#### Order Index Badge
+- Top-left corner badge showing position
+- Dark background with white text
+- 1-based numbering for user clarity
+
+#### Drag Handle
+- Top-right corner grip icon
+- Appears on hover (opacity transition)
+- Visual indicator that item is draggable
+
+## Usage Examples
+
+<CodeGroup>
+```tsx Gallery Component
+import { DraggableImageItem } from "../components/DraggableImageItem";
+import { DndContext, closestCenter } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useState } from "react";
+
+function ImageGallery() {
+  const [images, setImages] = useState<PropertyImageMeta[]>([
+    { id: 1, url: "/img1.jpg", orderIndex: 0, isMain: true },
+    { id: 2, url: "/img2.jpg", orderIndex: 1, isMain: false },
+    { id: 3, url: "/img3.jpg", orderIndex: 2, isMain: false },
+  ]);
+  const [deletedIds, setDeletedIds] = useState<number[]>([]);
+  const [rotations, setRotations] = useState<Record<number, number>>({});
+
+  const handleDelete = (id: number) => {
+    setDeletedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSetMain = (id: number) => {
+    setImages((prev) => {
+      const updated = prev.map((img) => ({
+        ...img,
+        isMain: img.id === id,
+      }));
+      // Move to position 1
+      const mainImg = updated.find((img) => img.id === id);
+      const others = updated.filter((img) => img.id !== id);
+      return mainImg ? [mainImg, ...others] : updated;
+    });
+  };
+
+  const handleRotate = (id: number) => {
+    setRotations((prev) => ({
+      ...prev,
+      [id]: ((prev[id] || 0) + 1) % 4,
+    }));
+  };
+
+  const getImageFitClass = (rotation: number) => {
+    return rotation % 2 === 0 ? "object-cover" : "object-contain";
+  };
+
+  return (
+    <DndContext collisionDetection={closestCenter}>
+      <SortableContext items={images} strategy={verticalListSortingStrategy}>
+        <div className="space-y-4">
+          {images.map((image) => (
+            <DraggableImageItem
+              key={image.id}
+              image={image}
+              onDelete={handleDelete}
+              onSetMain={handleSetMain}
+              onRotate={handleRotate}
+              isMarkedForDeletion={deletedIds.includes(image.id)}
+              rotationAngle={(rotations[image.id] || 0) * 90}
+              getImageFitClassForRotation={getImageFitClass}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+}
+```
+
+```tsx Property Form
+import { DraggableImageItem } from "../components/DraggableImageItem";
+import { useState } from "react";
+
+function PropertyImageManager({ propertyImages }) {
+  const [images, setImages] = useState(propertyImages);
+  const [toDelete, setToDelete] = useState<number[]>([]);
+  const [imageRotations, setImageRotations] = useState({});
+
+  const toggleDelete = (id: number) => {
+    setToDelete((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const setMainImage = (id: number) => {
+    // Update main image logic
+    const newImages = images.map((img) => ({
+      ...img,
+      isMain: img.id === id,
+    }));
+    setImages(newImages);
+  };
+
+  const rotateImage = (id: number) => {
+    setImageRotations((prev) => ({
+      ...prev,
+      [id]: ((prev[id] || 0) + 1) % 4,
+    }));
+  };
+
+  const handleSubmit = async () => {
+    // Process deletions
+    const remainingImages = images.filter(
+      (img) => !toDelete.includes(img.id)
+    );
+
+    // Save rotations
+    const imagesWithRotations = remainingImages.map((img) => ({
+      ...img,
+      rotation: imageRotations[img.id] || 0,
+    }));
+
+    await savePropertyImages(imagesWithRotations);
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h3>Property Images</h3>
+      {images.map((image) => (
+        <DraggableImageItem
+          key={image.id}
+          image={image}
+          onDelete={toggleDelete}
+          onSetMain={setMainImage}
+          onRotate={rotateImage}
+          isMarkedForDeletion={toDelete.includes(image.id)}
+          rotationAngle={(imageRotations[image.id] || 0) * 90}
+          getImageFitClassForRotation={(rot) =>
+            rot % 2 === 0 ? "object-cover" : "object-contain"
+          }
+        />
+      ))}
+      <button type="submit">Save Changes</button>
+    </form>
+  );
+}
+```
+
+```tsx Upload and Manage
+import { DraggableImageItem } from "../components/DraggableImageItem";
+import { useState } from "react";
+
+function ImageUploadManager() {
+  const [images, setImages] = useState<PropertyImageMeta[]>([]);
+  const [deletions, setDeletions] = useState<number[]>([]);
+  const [rotations, setRotations] = useState<Record<number, number>>({});
+  const [nextId, setNextId] = useState(1);
+
+  const handleUpload = async (files: FileList) => {
+    const newImages = Array.from(files).map((file, index) => ({
+      id: nextId + index,
+      url: URL.createObjectURL(file),
+      orderIndex: images.length + index,
+      isMain: images.length === 0 && index === 0,
+    }));
+
+    setImages([...images, ...newImages]);
+    setNextId(nextId + files.length);
+  };
+
+  return (
+    <div>
+      <input
+        type="file"
+        multiple
+        accept="image/*"
+        onChange={(e) => e.target.files && handleUpload(e.target.files)}
+      />
+
+      <div className="mt-4 space-y-4">
+        {images.map((image) => (
+          <DraggableImageItem
+            key={image.id}
+            image={image}
+            onDelete={(id) => {
+              setDeletions((prev) =>
+                prev.includes(id)
+                  ? prev.filter((i) => i !== id)
+                  : [...prev, id]
+              );
+            }}
+            onSetMain={(id) => {
+              setImages(
+                images.map((img) => ({
+                  ...img,
+                  isMain: img.id === id,
+                }))
+              );
+            }}
+            onRotate={(id) => {
+              setRotations((prev) => ({
+                ...prev,
+                [id]: ((prev[id] || 0) + 1) % 4,
+              }));
+            }}
+            isMarkedForDeletion={deletions.includes(image.id)}
+            rotationAngle={(rotations[image.id] || 0) * 90}
+            getImageFitClassForRotation={(rot) =>
+              rot % 2 === 0 ? "object-cover" : "object-contain"
+            }
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+</CodeGroup>
+
+## Button Controls
+
+### Delete Button (Top-Right)
+
+**States:**
+- Default: White background, gray text
+- Marked: Red background, white text
+
+**Icon:** X from lucide-react
+
+### Main Image Button (Bottom-Left)
+
+**States:**
+- Not main: White background, gray star outline
+- Main: Yellow background, filled yellow star, disabled
+
+**Icon:** Star from lucide-react
+
+### Rotate Button (Bottom-Right)
+
+**Style:** Blue background, white icon
+
+**Icon:** RotateCw from lucide-react
+
+### Drag Handle (Top-Right)
+
+**Style:** Gray background, appears on hover
+
+**Icon:** GripVertical from lucide-react
+
+## Styling
+
+### Container
+- Height: `h-32`
+- Relative positioning for absolute button placement
+- Group hover effects
+- Dragging states (opacity 0.5, scale 1.05, shadow-lg)
+
+### Image Container
+- Width: 80% of parent
+- Height: 80% of parent
+- Border and rounded corners
+- Centered using flex
+- Transform origin center for rotation
+- Smooth rotation transition (0.3s ease)
+
+### Image Fit Classes
+
+The `getImageFitClassForRotation` function should return:
+- `object-cover` for 0° and 180° (even rotations)
+- `object-contain` for 90° and 270° (odd rotations)
+
+This prevents image cropping when rotated to portrait orientation.
+
+## Drag & Drop Setup
+
+This component requires `@dnd-kit` setup:
+
+```tsx
+import { DndContext } from "@dnd-kit/core";
+import { SortableContext } from "@dnd-kit/sortable";
+
+<DndContext>
+  <SortableContext items={images}>
+    {/* DraggableImageItem components */}
+  </SortableContext>
+</DndContext>
+```
+
+## Keyboard Accessibility
+
+All buttons support keyboard interaction:
+- `Enter` key to activate
+- `Space` key to activate
+- `tabIndex={0}` on all buttons
+- Descriptive `aria-label` attributes
+
+### Aria Labels
+
+- Delete: "Marcar para eliminar" / "Desmarcar para eliminar"
+- Main: "Imagen principal (posición 1)" / "Mover a posición 1 (imagen principal)"
+- Rotate: "Rotar imagen"
+
+## Image URL Normalization
+
+Uses `normalizeImageUrl` utility from `../utils` to handle:
+- Relative URLs
+- Absolute URLs
+- CDN URLs
+- Local development URLs
+
+## Dependencies
+
+- `@dnd-kit/sortable` - Drag and drop functionality
+- `@dnd-kit/utilities` - CSS transform utilities
+- `lucide-react` - Icons (X, Star, RotateCw, GripVertical)
+- `../utils` - Image URL normalization
+
+## Integration Notes
+
+### With Form State
+
+The component is stateless and relies on parent state management:
+- Parent manages order
+- Parent tracks deletions
+- Parent stores rotations
+- Parent handles main image selection
+
+### With Backend
+
+Typical workflow:
+1. Load images from API with metadata
+2. User makes changes (reorder, rotate, delete, set main)
+3. Track changes in parent state
+4. On submit, send updated metadata to API
+5. API processes deletions, rotations, and new order
+
+## Source Code
+
+View the full implementation at `src/components/DraggableImageItem.tsx:1`

@@ -1,0 +1,256 @@
+---
+title: Tech Stack
+description: Overview of the technologies, frameworks, and libraries powering Inmobiliaria Web
+---
+
+Inmobiliaria Web is built with modern web technologies focused on performance, type safety, and developer experience.
+
+## Core Framework
+
+<CardGroup cols={2}>
+  <Card title="React 19" icon="react" iconType="duotone">
+    Latest version of React with improved server components and concurrent features
+  </Card>
+  <Card title="TypeScript 5.8" icon="code" iconType="duotone">
+    Type-safe JavaScript with advanced type checking and inference
+  </Card>
+</CardGroup>
+
+## Build Tools
+
+<CardGroup cols={2}>
+  <Card title="Vite 7" icon="bolt" iconType="duotone">
+    Next-generation frontend tooling with lightning-fast HMR
+  </Card>
+  <Card title="TanStack Router Plugin" icon="route" iconType="duotone">
+    Automatic route tree generation with type safety
+  </Card>
+</CardGroup>
+
+### Vite Configuration
+
+The project uses Vite with TanStack Router plugin for automatic code splitting:
+
+```typescript title="vite.config.ts"
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
+
+export default defineConfig({
+  plugins: [
+    tanstackRouter({
+      target: "react",
+      autoCodeSplitting: true,
+    }),
+    react(),
+  ],
+});
+```
+
+## Routing & Navigation
+
+<Card title="TanStack Router 1.130" icon="map" iconType="duotone">
+  Type-safe routing with automatic code splitting, search params validation, and nested layouts
+</Card>
+
+**Key Features:**
+- File-based routing with automatic route tree generation
+- Full TypeScript support with type-safe navigation
+- Built-in devtools for debugging routes
+- Search parameter validation
+- Nested layouts and route groups
+
+**Dependencies:**
+```json
+"@tanstack/react-router": "^1.130.12"
+"@tanstack/react-router-devtools": "^1.130.13"
+"@tanstack/router-plugin": "^1.130.15"
+```
+
+## Styling
+
+<CardGroup cols={3}>
+  <Card title="Tailwind CSS 3.4" icon="palette" iconType="duotone">
+    Utility-first CSS framework
+  </Card>
+  <Card title="clsx" icon="layer-group" iconType="duotone">
+    Conditional className utility
+  </Card>
+  <Card title="tailwind-merge" icon="merge" iconType="duotone">
+    Merge Tailwind classes intelligently
+  </Card>
+</CardGroup>
+
+### Custom Theme
+
+The project extends Tailwind's default theme with custom colors:
+
+```javascript title="tailwind.config.js"
+theme: {
+  extend: {
+    colors: {
+      primary: {
+        500: '#f59e0b',  // Amber/Gold
+        600: '#d97706',
+        // ... more shades
+      },
+      secondary: {
+        500: '#64748b',  // Slate
+        800: '#1e293b',
+        // ... more shades
+      },
+    },
+    fontFamily: {
+      sans: ['Inter', 'system-ui', 'sans-serif'],
+    },
+  },
+}
+```
+
+## Authentication
+
+<Card title="Better Auth 1.3" icon="shield" iconType="duotone">
+  Modern authentication solution with email verification, password reset, and session management
+</Card>
+
+**Implementation:**
+- Custom `AuthContext` for global auth state
+- `SecureRoute` component for protected routes
+- Email verification flow
+- Password reset functionality
+
+**Files:**
+- `src/lib/auth-client.ts` - Auth client configuration
+- `src/contexts/AuthContext.tsx` - Global auth state
+- `src/components/SecureRoute.tsx` - Route protection
+
+## Maps & Geolocation
+
+<CardGroup cols={2}>
+  <Card title="Google Maps API" icon="map-location-dot" iconType="duotone">
+    Address autocomplete and geocoding services
+  </Card>
+  <Card title="Leaflet 1.9" icon="map" iconType="duotone">
+    Interactive maps with React bindings
+  </Card>
+</CardGroup>
+
+**Dependencies:**
+```json
+"@googlemaps/js-api-loader": "^1.16.10"
+"@types/google.maps": "^3.58.1"
+"leaflet": "^1.9.4"
+"react-leaflet": "^5.0.0"
+"@types/leaflet": "^1.9.20"
+```
+
+**Components:**
+- `AddressAutocomplete.tsx` - Google Places autocomplete
+- `PropertyMap.tsx` - Leaflet map for property locations
+
+## UI Components & Icons
+
+<CardGroup cols={2}>
+  <Card title="Lucide React 0.460" icon="icons" iconType="duotone">
+    Modern icon library with 1000+ icons
+  </Card>
+  <Card title="React Hot Toast 2.6" icon="bell" iconType="duotone">
+    Lightweight notification system
+  </Card>
+</CardGroup>
+
+### Toast Configuration
+
+```typescript title="src/main.tsx"
+<Toaster
+  position="top-right"
+  toastOptions={{
+    duration: 4000,
+    style: {
+      background: "#363636",
+      color: "#fff",
+    },
+    success: {
+      duration: 3000,
+      style: { background: "#10b981" },
+    },
+    error: {
+      duration: 5000,
+      style: { background: "#ef4444" },
+    },
+  }}
+/>
+```
+
+## Drag & Drop
+
+<Card title="DnD Kit" icon="hand" iconType="duotone">
+  Modern drag and drop toolkit for React - used for image reordering in property forms
+</Card>
+
+**Dependencies:**
+```json
+"@dnd-kit/core": "^6.3.1"
+"@dnd-kit/sortable": "^10.0.0"
+"@dnd-kit/utilities": "^3.2.2"
+```
+
+**Implementation:**
+- `DraggableImageItem.tsx` - Sortable image component
+- Used in property creation/edit forms
+
+## Code Quality
+
+<CardGroup cols={2}>
+  <Card title="ESLint 9" icon="shield-check" iconType="duotone">
+    Code linting with React-specific rules
+  </Card>
+  <Card title="TypeScript ESLint 8" icon="code-branch" iconType="duotone">
+    TypeScript-specific linting rules
+  </Card>
+</CardGroup>
+
+**Plugins:**
+- `eslint-plugin-react-hooks` - Enforce hooks rules
+- `eslint-plugin-react-refresh` - Validate HMR setup
+
+## Development Tools
+
+<Accordion title="Package Scripts">
+  ```json
+  "scripts": {
+    "dev": "vite",              // Start dev server
+    "build": "tsc -b && vite build",  // Type check + build
+    "lint": "eslint .",         // Lint codebase
+    "preview": "vite preview"   // Preview production build
+  }
+  ```
+</Accordion>
+
+<Note>
+  The project uses **ES Modules** (`"type": "module"`) throughout the codebase for modern JavaScript features.
+</Note>
+
+## Utility Libraries
+
+| Library | Version | Purpose |
+|---------|---------|--------|
+| clsx | 2.1.1 | Conditional class names |
+| tailwind-merge | 2.5.4 | Merge Tailwind classes without conflicts |
+
+## Browser Support
+
+<Info>
+  The application targets modern browsers that support ES2020+ features. Vite automatically handles transpilation for the target environment.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Learn how the codebase is organized
+  </Card>
+  <Card title="Routing System" icon="route" href="/development/routing">
+    Understand the routing architecture
+  </Card>
+</CardGroup>

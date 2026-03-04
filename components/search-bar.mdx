@@ -1,0 +1,226 @@
+---
+title: SearchBar
+description: A flexible search input component with customizable styling and optional clear functionality
+---
+
+## Overview
+
+The `SearchBar` component provides a reusable search interface with a text input, search button, and optional clear button. It supports keyboard navigation and custom styling.
+
+## Import
+
+```tsx
+import SearchBar from "../components/SearchBar";
+```
+
+## Props
+
+<ParamField path="onSearch" type="(query: string) => void" required>
+  Callback function triggered when the user submits a search. Receives the trimmed search query as a parameter.
+</ParamField>
+
+<ParamField path="placeholder" type="string" default="Buscar por nombre, tipo de propiedad o dirección...">
+  Placeholder text displayed in the search input field.
+</ParamField>
+
+<ParamField path="initialValue" type="string" default="">
+  Initial value to populate the search input.
+</ParamField>
+
+<ParamField path="className" type="string" default="">
+  Additional CSS classes to apply to the container div.
+</ParamField>
+
+<ParamField path="buttonClassName" type="string" default="">
+  Additional CSS classes to apply to the search button.
+</ParamField>
+
+<ParamField path="inputClassName" type="string" default="">
+  Additional CSS classes to apply to the input field.
+</ParamField>
+
+<ParamField path="showClearButton" type="boolean" default={false}>
+  Whether to display a clear button when the input has content.
+</ParamField>
+
+<ParamField path="onClear" type="() => void">
+  Optional callback function triggered when the clear button is clicked.
+</ParamField>
+
+## Features
+
+### Search Button States
+
+The search button automatically handles different states:
+- **Enabled**: When input has content (red background, white text)
+- **Disabled**: When input is empty (gray background, disabled state)
+
+### Keyboard Support
+
+- Press **Enter** in the input field to trigger search
+- Tab navigation between input and buttons
+- Full keyboard accessibility
+
+### Clear Functionality
+
+When `showClearButton={true}`:
+- Clear button appears only when input has content
+- Clicking clear resets the input and calls `onClear` callback
+- Button has gray styling to differentiate from primary search action
+
+## Usage Examples
+
+<CodeGroup>
+```tsx Basic Usage
+import SearchBar from "../components/SearchBar";
+import { useState } from "react";
+
+function PropertySearch() {
+  const [results, setResults] = useState([]);
+
+  const handleSearch = (query: string) => {
+    console.log("Searching for:", query);
+    // Perform search logic here
+    fetchProperties(query).then(setResults);
+  };
+
+  return (
+    <div className="container mx-auto py-8">
+      <SearchBar onSearch={handleSearch} />
+      {/* Display results */}
+    </div>
+  );
+}
+```
+
+```tsx With Clear Button
+import SearchBar from "../components/SearchBar";
+import { useState } from "react";
+
+function AdvancedSearch() {
+  const [results, setResults] = useState([]);
+
+  const handleSearch = (query: string) => {
+    fetchProperties(query).then(setResults);
+  };
+
+  const handleClear = () => {
+    console.log("Search cleared");
+    setResults([]);
+  };
+
+  return (
+    <SearchBar
+      onSearch={handleSearch}
+      onClear={handleClear}
+      showClearButton={true}
+      placeholder="Search properties by location, type, or name..."
+    />
+  );
+}
+```
+
+```tsx Custom Styling
+import SearchBar from "../components/SearchBar";
+
+function StyledSearch() {
+  return (
+    <SearchBar
+      onSearch={(query) => console.log(query)}
+      className="max-w-4xl mx-auto"
+      inputClassName="text-lg py-3"
+      buttonClassName="px-8"
+      placeholder="What are you looking for?"
+    />
+  );
+}
+```
+
+```tsx With Initial Value
+import SearchBar from "../components/SearchBar";
+import { useSearchParams } from "@tanstack/react-router";
+
+function SearchWithQuery() {
+  const [searchParams] = useSearchParams();
+  const initialQuery = searchParams.query || "";
+
+  return (
+    <SearchBar
+      initialValue={initialQuery}
+      onSearch={(query) => {
+        // Update URL and perform search
+        navigate({ search: { query } });
+      }}
+    />
+  );
+}
+```
+</CodeGroup>
+
+## Variants
+
+The codebase includes two specialized variants:
+
+### ListingsSearchBar
+
+A variant used on the listings page with a rounded, centered design.
+
+```tsx
+import ListingsSearchBar from "../components/ListingsSearchBar";
+
+<ListingsSearchBar 
+  onSearch={handleSearch}
+  initialQuery={query}
+/>
+```
+
+**Key differences:**
+- Circular/pill-shaped design (`rounded-full`)
+- Integrated search button positioned inside input
+- Form-based submission
+
+See `src/components/ListingsSearchBar.tsx:1` for implementation.
+
+### HomePageSearchBar
+
+A variant designed for the homepage with automatic navigation to the listings page.
+
+```tsx
+import HomePageSearchBar from "../components/HomePageSearchBar";
+
+<HomePageSearchBar />
+```
+
+**Key differences:**
+- No props required (fully self-contained)
+- Automatically navigates to `/propiedades` on search
+- Uses `parseQueryToFilters` to convert search text into filter parameters
+- Large, centered design optimized for hero sections
+
+See `src/components/HomePageSearchBar.tsx:1` for implementation.
+
+## Styling
+
+Default styles include:
+- Flexbox layout with gap spacing
+- Red color scheme for primary actions (`red-800` for button)
+- Gray borders and focus states
+- Ring-based focus indicators
+- Smooth transitions for all state changes
+
+## Accessibility
+
+- Input has `aria-label="Buscar propiedades"`
+- Button has `aria-label="Buscar propiedades"`
+- All interactive elements have `tabIndex={0}`
+- Disabled state properly handled
+- Semantic HTML structure
+
+## Dependencies
+
+- `lucide-react` - For the Search icon
+- `react` - For state management (useState hook)
+
+## Source Code
+
+View the full implementation at `src/components/SearchBar.tsx:1`

@@ -1,0 +1,280 @@
+---
+title: Users API
+description: Endpoints for user profile management and favorites retrieval
+---
+
+## Overview
+
+The Users API provides endpoints for managing user profiles and retrieving favorite properties. All endpoints require authentication.
+
+**Base Path:** `/api/users`
+
+<Note>
+Authentication is handled via Better Auth. All requests must include valid session cookies.
+</Note>
+
+---
+
+## Get User Profile
+
+<CodeGroup>
+```typescript GET /users/profile
+const response = await api.users.getProfile();
+```
+</CodeGroup>
+
+Retrieve the authenticated user's profile information.
+
+### Authentication
+
+Requires valid session cookie. Returns 401 if not authenticated.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="User" required>
+  User profile object
+  
+  <Expandable title="User object structure">
+    <ResponseField name="id" type="string">
+      Unique user identifier
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      User's email address
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      User's full name
+    </ResponseField>
+    
+    <ResponseField name="photoURL" type="string">
+      Profile photo URL (if available)
+    </ResponseField>
+    
+    <ResponseField name="role" type="string">
+      User role: "user" or "admin"
+    </ResponseField>
+    
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp of account creation
+    </ResponseField>
+    
+    <ResponseField name="updatedAt" type="string">
+      ISO 8601 timestamp of last profile update
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "123",
+    "email": "user@example.com",
+    "name": "Juan Pérez",
+    "photoURL": "https://example.com/avatar.jpg",
+    "role": "user",
+    "createdAt": "2024-01-15T10:30:00Z",
+    "updatedAt": "2024-03-01T14:20:00Z"
+  }
+}
+```
+
+---
+
+## Update User Profile
+
+<CodeGroup>
+```typescript PUT /users/profile
+const response = await api.users.updateProfile({
+  name: "Juan Carlos Pérez",
+  photoURL: "https://example.com/new-avatar.jpg"
+});
+```
+</CodeGroup>
+
+Update the authenticated user's profile information.
+
+### Request Body
+
+<ParamField body="name" type="string">
+  User's full name (max 255 characters)
+</ParamField>
+
+<ParamField body="photoURL" type="string">
+  URL to user's profile photo
+</ParamField>
+
+<Note>
+Email and role cannot be changed through this endpoint. Contact an administrator to modify these fields.
+</Note>
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the update was successful
+</ResponseField>
+
+<ResponseField name="data" type="User" required>
+  Updated user profile object
+</ResponseField>
+
+### Example Request
+
+```typescript
+const response = await api.users.updateProfile({
+  name: "Juan Carlos Pérez"
+});
+```
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "123",
+    "email": "user@example.com",
+    "name": "Juan Carlos Pérez",
+    "role": "user",
+    "updatedAt": "2024-03-04T16:45:00Z"
+  }
+}
+```
+
+---
+
+## Get User Favorites
+
+<CodeGroup>
+```typescript GET /users/favorites
+const response = await api.users.getFavorites();
+```
+</CodeGroup>
+
+Retrieve all properties favorited by the authenticated user.
+
+### Authentication
+
+Requires valid session cookie. Returns 401 if not authenticated.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="string[]" required>
+  Array of property IDs that the user has favorited
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": ["123", "456", "789"]
+}
+```
+
+### Usage Example
+
+From `src/contexts/AuthContext.tsx:66`:
+
+```typescript
+const favoritesResponse = await api.users.getFavorites();
+setFavoriteIds(favoritesResponse.data || []);
+```
+
+### Usage with Property Details
+
+From `src/pages/FavoritesPage.tsx:28`:
+
+```typescript
+const favoritesResponse = await api.users.getFavorites();
+const favoriteIds = favoritesResponse.data || [];
+
+// Fetch full property details for each favorite
+const propertiesData = await Promise.all(
+  favoriteIds.map((id) =>
+    api.properties.get(String(id)).catch(() => {
+      console.error(`Failed to fetch property ${id}`);
+      return null;
+    })
+  )
+);
+
+const validProperties = propertiesData
+  .filter((p) => p !== null)
+  .map((p) => p.data);
+```
+
+<Note>
+The favorites endpoint returns only property IDs. To display property details, you need to fetch each property using the [Properties API](/api/properties#get-property-by-id).
+</Note>
+
+---
+
+## Error Responses
+
+All endpoints may return the following error responses:
+
+<ResponseField name="error" type="object">
+  <Expandable title="Error structure">
+    <ResponseField name="message" type="string">
+      Human-readable error message
+    </ResponseField>
+    
+    <ResponseField name="code" type="string">
+      Error code
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Common Status Codes
+
+- `200` - Success
+- `400` - Bad Request (invalid parameters)
+- `401` - Unauthorized (not logged in or session expired)
+- `403` - Forbidden (insufficient permissions)
+- `404` - Not Found
+- `500` - Internal Server Error
+
+### Common Error Codes
+
+<CodeGroup>
+```json UNAUTHORIZED
+{
+  "message": "Authentication required",
+  "code": "UNAUTHORIZED"
+}
+```
+
+```json VALIDATION_ERROR
+{
+  "message": "Name must be less than 255 characters",
+  "code": "VALIDATION_ERROR"
+}
+```
+
+```json SESSION_EXPIRED
+{
+  "message": "Session has expired. Please log in again.",
+  "code": "SESSION_EXPIRED"
+}
+```
+</CodeGroup>
+
+---
+
+## Related Documentation
+
+- [Properties API](/api/properties) - Manage favorites with add/remove endpoints
+- [Authentication](/api/authentication) - Login and session management
+- [Admin API](/api/admin) - Administrative user management

@@ -1,0 +1,414 @@
+---
+title: Better Auth Integration
+description: Complete guide to integrating Better Auth authentication in the frontend application
+---
+
+## Overview
+
+The Inmobiliaria Web application uses [Better Auth](https://better-auth.com) for authentication. This guide covers the complete integration including client setup, authentication flows, and session management.
+
+## Installation
+
+<Steps>
+  <Step title="Install Better Auth">
+    Install the Better Auth client package in your frontend project:
+
+    ```bash
+    npm install better-auth
+    ```
+  </Step>
+
+  <Step title="Configure Environment Variables">
+    Set the backend API URL in your environment configuration:
+
+    ```bash
+    VITE_API_URL=http://localhost:10000/api
+    ```
+  </Step>
+</Steps>
+
+## Client Initialization
+
+The auth client is initialized in `src/lib/auth-client.ts` with the admin plugin enabled:
+
+```typescript src/lib/auth-client.ts
+import { createAuthClient } from "better-auth/react";
+import { adminClient } from "better-auth/client/plugins";
+import { API_ORIGIN } from "./api";
+
+export const authClient = createAuthClient({
+  baseURL: API_ORIGIN,
+  plugins: [adminClient()],
+});
+```
+
+<Note>
+  The `API_ORIGIN` is dynamically determined from the `VITE_API_URL` environment variable, defaulting to `http://localhost:10000` for development.
+</Note>
+
+## Authentication Context
+
+The application uses a React Context (`AuthContext`) to manage authentication state globally. Located in `src/contexts/AuthContext.tsx`, it provides:
+
+- User session state
+- Authentication methods (sign in, sign up, sign out)
+- Password reset functionality
+- Favorites management
+
+### Provider Setup
+
+Wrap your application with the `AuthProvider`:
+
+```tsx
+import { AuthProvider } from "./contexts/AuthContext";
+
+function App() {
+  return (
+    <AuthProvider>
+      {/* Your app components */}
+    </AuthProvider>
+  );
+}
+```
+
+### Using the Auth Hook
+
+Access authentication state and methods using the `useAuth` hook:
+
+```tsx
+import { useAuth } from "./contexts/AuthContext";
+
+function MyComponent() {
+  const { user, loading, signIn, signOut } = useAuth();
+
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <div>Not logged in</div>;
+
+  return (
+    <div>
+      <h1>Welcome, {user.name}</h1>
+      <button onClick={signOut}>Sign Out</button>
+    </div>
+  );
+}
+```
+
+## Authentication Flows
+
+### Sign Up
+
+Create new user accounts with email verification:
+
+```tsx
+const { signUp } = useAuth();
+
+const handleSignUp = async () => {
+  try {
+    await signUp(email, password, name);
+    // User created - email verification required
+    alert("Check your email for verification!");
+  } catch (error) {
+    console.error(error.message);
+  }
+};
+```
+
+<CodeGroup>
+```tsx Implementation
+const signUp = async (email: string, password: string, name: string) => {
+  const response = await authClient.signUp.email({
+    email,
+    password,
+    name,
+    callbackURL: "/",
+  });
+
+  if (response.error) {
+    throw response.error;
+  }
+};
+```
+
+```tsx Full Example
+import { useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+
+export default function SignUpForm() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const { signUp } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await signUp(email, password, name);
+      alert("Account created! Check your email.");
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Full Name"
+      />
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email"
+      />
+      <input
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Password"
+      />
+      <button type="submit">Sign Up</button>
+    </form>
+  );
+}
+```
+</CodeGroup>
+
+### Sign In
+
+Authenticate existing users:
+
+```tsx
+const { signIn } = useAuth();
+
+const handleSignIn = async () => {
+  try {
+    await signIn(email, password);
+    // User signed in successfully
+  } catch (error) {
+    console.error(error.message);
+  }
+};
+```
+
+<Note>
+  The `signIn` method automatically refreshes the session after successful authentication.
+</Note>
+
+### Google Social Sign In
+
+Implement OAuth authentication with Google:
+
+```tsx
+import { authClient } from "./lib/auth-client";
+
+const handleGoogleSignIn = async () => {
+  await authClient.signIn.social({
+    provider: "google",
+    callbackURL: "/dashboard",
+  });
+};
+```
+
+### Password Reset
+
+<Steps>
+  <Step title="Request Reset">
+    User requests a password reset email:
+
+    ```tsx
+    const { requestPasswordReset } = useAuth();
+
+    const handleForgotPassword = async () => {
+      try {
+        await requestPasswordReset(email);
+        alert("Reset email sent!");
+      } catch (error) {
+        console.error(error.message);
+      }
+    };
+    ```
+  </Step>
+
+  <Step title="Reset Password">
+    User submits new password with token from email:
+
+    ```tsx
+    const { resetPassword } = useAuth();
+
+    const handleResetPassword = async () => {
+      // Get token from URL query params
+      const token = searchParams.get("token");
+      
+      try {
+        await resetPassword(token, newPassword);
+        alert("Password reset successfully!");
+        navigate("/login");
+      } catch (error) {
+        console.error(error.message);
+      }
+    };
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  After a successful password reset, users must sign in again. The reset process does not automatically create a session.
+</Warning>
+
+## Session Management
+
+### Automatic Session Refresh
+
+The `AuthContext` automatically checks and refreshes the session on mount:
+
+```tsx src/contexts/AuthContext.tsx
+const refreshSession = async () => {
+  const { data } = await authClient.getSession();
+
+  if (data?.user) {
+    const user = data.user as unknown as User;
+    // Fetch user favorites
+    const favoritesResponse = await api.users.getFavorites();
+    const favoriteIds = favoritesResponse.data?.map(
+      (property: Property) => property.id
+    ) || [];
+
+    setAuthState({
+      user,
+      loading: false,
+      error: null,
+      favoritePropertyIds: favoriteIds,
+      refreshingSession: false,
+    });
+  }
+};
+```
+
+### Using Session Data
+
+Access the current user session:
+
+```tsx
+const { user, loading } = useAuth();
+
+if (loading) {
+  return <LoadingSpinner />;
+}
+
+if (!user) {
+  return <LoginPrompt />;
+}
+
+return (
+  <div>
+    <p>Email: {user.email}</p>
+    <p>Name: {user.name}</p>
+    <p>Role: {user.role}</p>
+  </div>
+);
+```
+
+### Protected Routes
+
+Implement route protection based on authentication state:
+
+```tsx
+import { useAuth } from "./contexts/AuthContext";
+import { Navigate } from "@tanstack/react-router";
+
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  return children;
+}
+```
+
+## Error Handling
+
+The application includes error translation utilities for user-friendly messages:
+
+```tsx src/utils/authErrorTranslator.ts
+export const translateAuthError = (errorMessage: string): string => {
+  // Map English error messages to Spanish
+  if (errorMessage.includes("Invalid credentials")) {
+    return "Credenciales inválidas";
+  }
+  // ... more translations
+  return errorMessage;
+};
+```
+
+Errors are automatically handled in the `AuthContext` and cleared after 5 seconds:
+
+```tsx
+const { error } = useAuth();
+
+{error && (
+  <div className="error-message">
+    {error}
+  </div>
+)}
+```
+
+## Favorites Management
+
+The auth context includes favorites management:
+
+```tsx
+const { addToFavorites, removeFromFavorites, isFavorite } = useAuth();
+
+// Check if property is favorited
+const isPropertyFavorited = isFavorite(propertyId);
+
+// Add to favorites
+await addToFavorites(propertyId);
+
+// Remove from favorites
+await removeFromFavorites(propertyId);
+```
+
+## Best Practices
+
+<Note>
+  - Always check `loading` state before rendering user-dependent UI
+  - Handle errors gracefully with user-friendly messages
+  - Use the `refreshSession` method after operations that modify user state
+  - Implement proper loading states during authentication operations
+  - Clear sensitive data on sign out
+</Note>
+
+## API Reference
+
+### AuthContext Methods
+
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `signIn` | `email`, `password` | Sign in with email and password |
+| `signUp` | `email`, `password`, `name` | Create new user account |
+| `signOut` | - | Sign out current user |
+| `refreshSession` | - | Manually refresh user session |
+| `requestPasswordReset` | `email` | Send password reset email |
+| `resetPassword` | `token`, `newPassword` | Reset password with token |
+| `addToFavorites` | `propertyId` | Add property to favorites |
+| `removeFromFavorites` | `propertyId` | Remove property from favorites |
+| `isFavorite` | `propertyId` | Check if property is favorited |
+
+### Auth State
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `user` | `User \| null` | Current authenticated user |
+| `loading` | `boolean` | Authentication operation in progress |
+| `error` | `string \| null` | Current error message |
+| `favoritePropertyIds` | `string[]` | Array of favorited property IDs |

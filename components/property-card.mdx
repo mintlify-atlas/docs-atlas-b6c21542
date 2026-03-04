@@ -1,0 +1,227 @@
+---
+title: PropertyCard
+description: A comprehensive card component for displaying property listings with images, details, and interactive features
+---
+
+## Overview
+
+The `PropertyCard` component displays property information in a card format, featuring an image, property details, pricing, amenities, and action buttons. It includes favorites functionality, status overlays, and WhatsApp integration.
+
+## Import
+
+```tsx
+import PropertyCard from "../components/PropertyCard";
+```
+
+## Props
+
+<ParamField path="property" type="Property" required>
+  The property object containing all property information. See the [Property Type](#property-type) section below for details.
+</ParamField>
+
+## Property Type
+
+The `Property` interface includes the following key fields:
+
+<ParamField path="id" type="string" required>
+  Unique identifier for the property
+</ParamField>
+
+<ParamField path="slug" type="string">
+  URL-friendly slug for better SEO links
+</ParamField>
+
+<ParamField path="title" type="string" required>
+  Property title/name
+</ParamField>
+
+<ParamField path="price" type="number">
+  Current price of the property
+</ParamField>
+
+<ParamField path="originalPrice" type="number">
+  Original price (shown with strikethrough if different from current price)
+</ParamField>
+
+<ParamField path="currency" type="string">
+  Currency code (e.g., "USD", "ARS")
+</ParamField>
+
+<ParamField path="propertyType" type="string" required>
+  Type of property (e.g., "casa", "departamento", "terreno", "local")
+</ParamField>
+
+<ParamField path="listingType" type="string" required>
+  Listing operation type (e.g., "venta", "alquiler", "venta-y-alquiler")
+</ParamField>
+
+<ParamField path="bedrooms" type="number">
+  Number of bedrooms
+</ParamField>
+
+<ParamField path="bathrooms" type="number">
+  Number of bathrooms
+</ParamField>
+
+<ParamField path="garageSpaces" type="number">
+  Number of garage spaces
+</ParamField>
+
+<ParamField path="images" type="string[]" required>
+  Array of image URLs
+</ParamField>
+
+<ParamField path="status" type="string">
+  Property status (e.g., "activo", "pendiente", "vendido", "alquilado", "reservado")
+</ParamField>
+
+<ParamField path="contactPhone" type="string">
+  Contact phone number for WhatsApp integration
+</ParamField>
+
+<ParamField path="address" type="object">
+  Address information including street, city, state, etc.
+</ParamField>
+
+<ParamField path="location" type="object">
+  Alternative location object with similar fields to address
+</ParamField>
+
+## Features
+
+### Status Overlays
+
+When a property has certain statuses, an overlay is displayed on the image:
+- **Pendiente** (Pending)
+- **Vendido** (Sold)
+- **Alquilado** (Rented)
+- **Reservado** (Reserved)
+
+The overlay includes a colored background (40% opacity) and a prominent status badge.
+
+### Favorites System
+
+The card includes a heart icon button that allows users to:
+- Add properties to favorites (requires authentication)
+- Remove properties from favorites
+- Shows login modal for unauthenticated users
+
+### Price Display
+
+Pricing is displayed with the following logic:
+- If `originalPrice` exists and is greater than `price`, both are shown (with original price struck through)
+- Otherwise, only the current price is displayed
+- If no price is available, shows "Consultar precio"
+
+### Property Statistics
+
+Displays relevant property information with icons:
+- **Ambientes** (Rooms) - Purple icon
+- **Dormitorios** (Bedrooms) - Red icon
+- **Baños** (Bathrooms) - Blue icon
+- **Cocheras** (Garage spaces) - Gray icon
+- **Superficie cubierta** (Covered surface) - Green icon
+- **Terreno** (Lot size) - Orange icon
+
+### Action Buttons
+
+1. **Ver propiedad** - View property details (navigates to property page)
+2. **Consultar** - Opens WhatsApp with pre-filled message (only shown if `contactPhone` exists)
+
+## Usage Example
+
+<CodeGroup>
+```tsx Basic Usage
+import PropertyCard from "../components/PropertyCard";
+import type { Property } from "../types/api";
+
+const property: Property = {
+  id: "123",
+  slug: "beautiful-house-downtown",
+  title: "Beautiful House in Downtown",
+  price: 250000,
+  originalPrice: 280000,
+  currency: "USD",
+  propertyType: "casa",
+  listingType: "venta",
+  bedrooms: 3,
+  bathrooms: 2,
+  garageSpaces: 2,
+  images: ["/images/house1.jpg", "/images/house2.jpg"],
+  status: "activo",
+  contactPhone: "3624543423",
+  address: {
+    street: "Main Street",
+    streetNumber: "123",
+    city: "Buenos Aires",
+    state: "Buenos Aires",
+    zipCode: "1000",
+    country: "Argentina"
+  },
+  // ... other property fields
+};
+
+function PropertyList() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <PropertyCard property={property} />
+    </div>
+  );
+}
+```
+
+```tsx With Grid Layout
+import PropertyCard from "../components/PropertyCard";
+import { useState, useEffect } from "react";
+
+function FeaturedProperties() {
+  const [properties, setProperties] = useState([]);
+
+  useEffect(() => {
+    // Fetch properties from API
+    fetchProperties().then(setProperties);
+  }, []);
+
+  return (
+    <section className="py-12">
+      <h2 className="text-3xl font-bold mb-8">Featured Properties</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {properties.map((property) => (
+          <PropertyCard key={property.id} property={property} />
+        ))}
+      </div>
+    </section>
+  );
+}
+```
+</CodeGroup>
+
+## Styling
+
+The component uses Tailwind CSS classes and includes:
+- Hover effects on the card (shadow enhancement)
+- Image zoom effect on hover
+- Responsive design (adjusts height based on price display)
+- Smooth transitions for all interactive elements
+
+### Card Heights
+
+- **With discount**: `min-h-[550px]` (when originalPrice > price)
+- **Standard**: `min-h-[500px]`
+
+## Dependencies
+
+- `@tanstack/react-router` - For navigation (Link component)
+- `lucide-react` - For icons (Bed, Bath, Heart, LayoutGrid, Ruler, Car, MessageCircle)
+- `AuthContext` - For favorites functionality
+
+## Accessibility
+
+- All interactive elements have `tabIndex={0}` for keyboard navigation
+- Buttons include `aria-label` attributes
+- Images include alt text
+- Semantic HTML structure
+
+## Source Code
+
+View the full implementation at `src/components/PropertyCard.tsx:1`

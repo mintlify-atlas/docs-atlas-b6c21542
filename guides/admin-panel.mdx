@@ -1,0 +1,516 @@
+---
+title: Admin Panel Guide
+description: Complete guide to managing properties, viewing statistics, and using admin features on Inmobiliaria Web
+---
+
+# Admin Panel Guide
+
+The Admin Panel is your central hub for managing all property listings, viewing statistics, and performing administrative tasks.
+
+## Accessing the Admin Panel
+
+The admin panel requires authentication. Navigate to `/admin` or click "Panel de Administración" in the navigation menu.
+
+<Note>
+  You must have admin privileges to access this area. If you see an error, contact your system administrator for access.
+</Note>
+
+## Dashboard Overview
+
+The admin panel provides a comprehensive view of your real estate business.
+
+### Statistics Cards
+
+Four key metrics are displayed at the top:
+
+<CardGroup cols={2}>
+  <Card title="Total de Propiedades" icon="home">
+    Shows the total number of properties in your system, regardless of status.
+  </Card>
+  
+  <Card title="Anuncios Activos" icon="check-circle">
+    Number of properties with "Activo" status - currently visible to the public.
+  </Card>
+  
+  <Card title="En Venta" icon="dollar-sign">
+    Count of properties listed for sale (operation type: "venta").
+  </Card>
+  
+  <Card title="En Alquiler" icon="calendar">
+    Count of properties available for rent (operation type: "alquiler").
+  </Card>
+</CardGroup>
+
+### Quick Actions
+
+From the header:
+- **Agregar Propiedad**: Create a new property listing (green button, top-right)
+- **Search**: Find specific properties quickly
+
+## Property List
+
+All properties are displayed in a card-based list view.
+
+### Property Card Information
+
+Each card shows:
+
+- **Thumbnail Image**: Main property photo
+- **Title**: Property name/description
+- **Location**: Street address (from PropertyCard component)
+- **Type and Operation**: E.g., "Casa • Venta"
+- **Status Badge**: Color-coded status indicator
+  - 🟢 Green: Activo
+  - 🟡 Yellow: Pendiente
+  - ⚫ Gray: Pausado, Reservado, etc.
+- **Price**: Current asking price with currency
+- **Discount**: If applicable, shows original price and discount percentage
+
+### Property Actions
+
+Each property has quick action buttons:
+
+<Steps>
+  <Step title="View (Eye Icon)">
+    Opens the public property detail page in a new tab to preview how visitors see it.
+  </Step>
+  
+  <Step title="Edit (Pencil Icon)">
+    Opens the property form with all data pre-filled for editing.
+  </Step>
+  
+  <Step title="Archive (Archive Icon)">
+    Toggles between "Activo" and "Pausado" status:
+    - Paused properties are hidden from public view
+    - Can be unarchived at any time
+    - Useful for temporary unavailability
+  </Step>
+  
+  <Step title="Delete (Trash Icon)">
+    Permanently removes the property from the database.
+    
+    <Warning>
+      This action cannot be undone. Use archive for temporary removal instead.
+    </Warning>
+  </Step>
+</Steps>
+
+## Searching Properties
+
+The search bar allows quick filtering of your property list.
+
+### What You Can Search
+
+The search finds matches in:
+- Property title
+- City name
+- Contact phone number
+
+### Search Behavior
+
+- Type in the search field
+- Results filter in real-time as you type
+- Case-insensitive matching
+- Partial matches work ("dep" finds "Departamento")
+
+<Tip>
+  Use search combined with sorting to quickly find the property you need to edit.
+</Tip>
+
+## Managing Property Status
+
+### Status Options
+
+Properties can have one of six statuses:
+
+<AccordionGroup>
+  <Accordion title="Activo" icon="check-circle">
+    **Publicly Visible**
+    
+    - Appears in search results
+    - Visible on listings page
+    - Can receive inquiries
+    - Indexed by search engines
+    
+    Use for: Properties ready for buyer/renter viewing
+  </Accordion>
+  
+  <Accordion title="Pendiente" icon="clock">
+    **Awaiting Publication**
+    
+    - Not visible to public
+    - Visible only in admin panel
+    - Useful for incomplete listings
+    
+    Use for: Properties being prepared, awaiting photos or information
+  </Accordion>
+  
+  <Accordion title="Reservado" icon="bookmark">
+    **Reserved by Buyer**
+    
+    - Still visible to public
+    - Shows "Reservado" badge
+    - Indicates serious buyer interest
+    
+    Use for: Properties with accepted offers but not yet sold/rented
+  </Accordion>
+  
+  <Accordion title="Vendido" icon="handshake">
+    **Sold**
+    
+    - Archived status
+    - Not visible to public
+    - Historical record maintained
+    
+    Use for: Completed sale transactions
+  </Accordion>
+  
+  <Accordion title="Alquilado" icon="key">
+    **Rented**
+    
+    - Archived status
+    - Not visible to public
+    - Historical record maintained
+    
+    Use for: Completed rental agreements
+  </Accordion>
+  
+  <Accordion title="Pausado" icon="pause-circle">
+    **Temporarily Hidden**
+    
+    - Not visible to public
+    - Quick to reactivate
+    - All data preserved
+    
+    Use for: Temporary unavailability, under repairs, owner request
+  </Accordion>
+</AccordionGroup>
+
+### Changing Status
+
+**Quick Archive/Unarchive:**
+1. Click the archive icon on the property card
+2. Confirm in the modal dialog
+3. Property toggles between Activo ↔ Pausado
+
+**Detailed Status Change:**
+1. Click Edit on the property
+2. Change the "Estado" dropdown
+3. Save the property
+
+## Archive and Delete Confirmations
+
+### Archive Modal
+
+When archiving/unarchiving:
+
+```
+¿Archivar propiedad?
+¿Querés archivar "[Property Title]"? 
+Podrás desarchivarla cuando quieras.
+
+[Cancelar] [Archivar]
+```
+
+Or for unarchiving:
+
+```
+¿Desarchivar propiedad?
+¿Querés desarchivar "[Property Title]" 
+y marcarla como activa?
+
+[Cancelar] [Desarchivar]
+```
+
+### Delete Modal
+
+Deleting shows a destructive warning:
+
+```
+¿Eliminar propiedad?
+¿Estás seguro de que queres eliminar 
+"[Property Title]"? 
+Esta acción no se puede deshacer.
+
+[Cancelar] [Eliminar]
+```
+
+<Warning>
+  Deleted properties are permanently removed. There is no recovery option. Always use Archive for temporary removal.
+</Warning>
+
+## Creating New Properties
+
+Click "Agregar Propiedad" to access the property form.
+
+For complete details on creating listings, see:
+
+<Card title="Creating Listings" icon="plus" href="/guides/creating-listings">
+  Comprehensive guide to creating property listings with photos, details, and features.
+</Card>
+
+## Editing Properties
+
+### Opening the Editor
+
+1. Find the property in the list
+2. Click the blue Edit icon (pencil)
+3. Property form opens with all existing data
+
+### What You Can Edit
+
+**Everything can be modified:**
+- Basic information (title, description, type)
+- Pricing and currency
+- All specifications and features
+- Location and coordinates
+- Status
+- Images (add, remove, reorder, rotate)
+- YouTube video URL
+
+### Image Management in Edit Mode
+
+**Existing Images:**
+- Appear in current order
+- Can be reordered by dragging
+- Can be rotated 90° increments
+- Can be marked for deletion
+- Can set a different main image
+
+**New Images:**
+- Upload alongside existing photos
+- Will be appended or inserted based on order
+- Can set as main image
+
+<Note>
+  Changes to images are not applied until you save the property. Click "Guardar" to confirm all modifications.
+</Note>
+
+## Empty States
+
+### No Properties
+
+If you have no properties yet:
+
+```
+No se encontraron propiedades
+Comienza agregando tu primera propiedad
+
+[Agregar Tu Primera Propiedad]
+```
+
+### No Search Results
+
+If search returns no matches:
+
+```
+No se encontraron propiedades
+Intenta ajustar tus criterios de búsqueda
+```
+
+## Loading States
+
+While data is loading:
+
+- Spinner icon with "Cargando panel de administración..."
+- Stats cards may show 0 temporarily
+- Property list displays loading indicator
+
+## Error Handling
+
+If data fails to load:
+
+```
+Error al cargar datos
+[Error message details]
+```
+
+Common causes:
+- Network connection issues
+- Server downtime
+- Authentication expired
+
+**Solutions:**
+- Refresh the page
+- Check internet connection
+- Re-authenticate if needed
+- Contact technical support
+
+## Price Display Features
+
+### Regular Price
+
+Shows as: `$150.000 USD`
+
+Format includes:
+- Currency symbol
+- Thousands separator
+- Currency code
+
+### Discounted Price
+
+When `originalPrice > price`:
+
+```
+$120.000 USD ← Current price (red, bold)
+$150.000 USD ← Original (gray, strikethrough)
+[20% OFF] ← Discount badge (green)
+```
+
+### Price Not Available
+
+If no price set: `Precio no disponible`
+
+<Tip>
+  Properties with visible discounts get more attention from buyers. Use this feature to highlight price reductions.
+</Tip>
+
+## Keyboard Navigation
+
+The admin panel supports keyboard navigation:
+
+- **Tab**: Move between interactive elements
+- **Enter/Space**: Activate buttons and links
+- **Esc**: Close modal dialogs
+- Use arrow keys in dropdowns and selects
+
+## Mobile Responsiveness
+
+The admin panel adapts to mobile devices:
+
+- Stats cards stack vertically
+- Property cards use single-column layout
+- Actions remain accessible via icon buttons
+- Search bar is full-width
+- Modals fit small screens
+
+<Note>
+  While the admin panel works on mobile, desktop is recommended for image management and detailed editing.
+</Note>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Regular Maintenance">
+    - Review property statuses weekly
+    - Update sold/rented properties promptly
+    - Archive unavailable properties
+    - Delete duplicate listings
+    - Keep images and descriptions current
+  </Accordion>
+  
+  <Accordion title="Status Management">
+    - Use "Pendiente" for incomplete listings
+    - Set to "Activo" only when ready
+    - "Reservado" when offer is accepted
+    - "Pausado" for temporary issues
+    - "Vendido"/"Alquilado" after closing
+  </Accordion>
+  
+  <Accordion title="Efficient Workflow">
+    - Use search to find properties quickly
+    - Preview changes using the View button
+    - Save frequently when editing
+    - Archive instead of delete when unsure
+    - Keep statistics visible for insights
+  </Accordion>
+  
+  <Accordion title="Image Quality">
+    - Always include at least 5 images
+    - Set the most attractive photo as main
+    - Remove poor quality images
+    - Keep photos up-to-date
+    - Rotate images correctly before saving
+  </Accordion>
+</AccordionGroup>
+
+## Common Tasks
+
+### Task: Mark a Property as Sold
+
+<Steps>
+  <Step title="Find the Property">
+    Use search or scroll to locate the sold property.
+  </Step>
+  
+  <Step title="Edit the Property">
+    Click the pencil (Edit) icon.
+  </Step>
+  
+  <Step title="Change Status">
+    In the "Estado" dropdown, select "Vendido".
+  </Step>
+  
+  <Step title="Save">
+    Click "Guardar" to update the status.
+  </Step>
+</Steps>
+
+### Task: Temporarily Hide a Property
+
+<Steps>
+  <Step title="Locate Property">
+    Find the property you want to hide.
+  </Step>
+  
+  <Step title="Click Archive">
+    Click the archive icon (box with down arrow).
+  </Step>
+  
+  <Step title="Confirm">
+    Click "Archivar" in the confirmation modal.
+  </Step>
+  
+  <Step title="Verify">
+    Property status changes to "Pausado" and is removed from public view.
+  </Step>
+</Steps>
+
+### Task: Update Property Price
+
+<Steps>
+  <Step title="Edit Property">
+    Click Edit on the property card.
+  </Step>
+  
+  <Step title="Modify Price">
+    Update the "Precio" field with the new amount.
+  </Step>
+  
+  <Step title="Optional: Set Original Price">
+    If reducing price, the old price is automatically saved as "Original Price".
+  </Step>
+  
+  <Step title="Save Changes">
+    Click "Guardar" to apply the new price.
+  </Step>
+</Steps>
+
+## Performance Tips
+
+- **Large Image Uploads**: Upload images in batches of 5-10 for faster processing
+- **Slow Loading**: Clear browser cache if the panel loads slowly
+- **Search Instead of Scroll**: Use search for faster navigation with many properties
+- **Regular Browser**: Close unused tabs to free up memory
+
+## Security Reminders
+
+<Warning>
+  - Always log out when finished, especially on shared computers
+  - Don't share admin credentials
+  - Use a strong, unique password
+  - Review who has admin access regularly
+</Warning>
+
+## Support and Help
+
+If you encounter issues:
+
+1. **Check this documentation** for guidance
+2. **Refresh the page** to resolve temporary glitches
+3. **Clear browser cache** if experiencing persistent issues
+4. **Contact technical support** with:
+   - Description of the issue
+   - Browser and version
+   - Steps to reproduce
+   - Screenshot if applicable

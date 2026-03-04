@@ -1,0 +1,358 @@
+---
+title: Project Structure
+description: File organization, directory layout, and naming conventions in Inmobiliaria Web
+---
+
+The Inmobiliaria Web project follows a clean, modular architecture with clear separation of concerns.
+
+## Directory Overview
+
+```
+src/
+├── assets/          # Static assets (images, fonts)
+├── components/      # Reusable React components
+├── contexts/        # React Context providers
+├── hooks/           # Custom React hooks
+├── lib/             # External service integrations
+├── pages/           # Page-level components
+├── routes/          # TanStack Router route definitions
+├── types/           # TypeScript type definitions
+├── utils/           # Utility functions and helpers
+├── main.tsx         # Application entry point
+├── index.css        # Global styles & Tailwind imports
+└── routeTree.gen.ts # Auto-generated route tree
+```
+
+## Core Directories
+
+### Components (`src/components/`)
+
+Reusable UI components used throughout the application.
+
+<Accordion title="Component List">
+  - **AddressAutocomplete.tsx** - Google Places autocomplete input
+  - **DraggableImageItem.tsx** - Sortable image component for property forms
+  - **FilterSidebar.tsx** - Property search filters
+  - **Footer.tsx** - Global footer layout
+  - **Header.tsx** - Global header with navigation
+  - **HomePageSearchBar.tsx** - Search bar for homepage
+  - **ListingsSearchBar.tsx** - Search bar for listings page
+  - **PropertyCard.tsx** - Property preview card
+  - **PropertyMap.tsx** - Interactive map with property markers
+  - **SearchBar.tsx** - Generic search component
+  - **SecureRoute.tsx** - Protected route wrapper
+  - **WhatsAppButton.tsx** - Floating WhatsApp contact button
+</Accordion>
+
+<Note>
+  Components are organized as **single-file components** with all logic, styles, and JSX in one `.tsx` file.
+</Note>
+
+### Pages (`src/pages/`)
+
+Page-level components that represent full views.
+
+<CardGroup cols={2}>
+  <Card title="Public Pages" icon="globe">
+    - HomePage
+    - ListingsPage
+    - PropertyDetailPage
+    - AboutPage (Nosotros)
+    - ServiciosPage
+    - QuieroVenderPage
+  </Card>
+  <Card title="Auth Pages" icon="lock">
+    - AuthPage (Login/Register)
+    - ForgotPasswordPage
+    - PasswordResetPage
+    - EmailVerificationPendingPage
+    - VerifyEmailPage
+  </Card>
+  <Card title="Protected Pages" icon="shield">
+    - AdminPage
+    - PropertyFormPage
+    - FavoritesPage
+  </Card>
+</CardGroup>
+
+### Routes (`src/routes/`)
+
+File-based routing with TanStack Router. Each file represents a route.
+
+```
+routes/
+├── __root.tsx              # Root layout (Header, Footer, Auth)
+├── index.tsx               # Homepage route
+├── nosotros.tsx            # /nosotros
+├── servicios.tsx           # /servicios
+├── quiero-vender.tsx       # /quiero-vender
+├── favorites.tsx           # /favorites (protected)
+├── propiedades.tsx         # /propiedades (layout)
+├── propiedades.index.tsx   # /propiedades (listing)
+├── propiedades.$propertyId.tsx  # /propiedades/:id
+├── propiedades.p.$slug.tsx      # /propiedades/p/:slug
+├── listings/
+│   └── p/
+│       └── $slug.tsx       # /listings/p/:slug
+├── auth.tsx                # /auth (layout)
+├── auth/
+│   ├── index.tsx           # /auth (login)
+│   ├── forgot-password.tsx # /auth/forgot-password
+│   ├── reset-password.tsx  # /auth/reset-password
+│   ├── verify-email.tsx    # /auth/verify-email
+│   └── verify-email-pending.tsx
+├── admin.tsx               # /admin (layout, protected)
+└── admin/
+    ├── index.tsx           # /admin (dashboard)
+    └── property/
+        ├── new.tsx         # /admin/property/new
+        └── edit/
+            └── $propertyId.tsx  # /admin/property/edit/:id
+```
+
+<Info>
+  Routes are **automatically discovered** by TanStack Router and compiled into `src/routeTree.gen.ts`. Never edit this file manually.
+</Info>
+
+### Contexts (`src/contexts/`)
+
+React Context providers for global state management.
+
+<Card title="AuthContext.tsx" icon="key">
+  Manages global authentication state:
+  - Current user session
+  - Login/logout methods
+  - User permissions
+  - Session persistence
+</Card>
+
+### Hooks (`src/hooks/`)
+
+Custom React hooks for reusable logic.
+
+<CardGroup cols={2}>
+  <Card title="usePermissions.ts" icon="shield-check">
+    Check user roles and permissions
+  </Card>
+  <Card title="useSEO.ts" icon="magnifying-glass">
+    Manage document title and meta tags
+  </Card>
+</CardGroup>
+
+### Lib (`src/lib/`)
+
+External service integrations and client configurations.
+
+<Accordion title="Library Files">
+  - **api.ts** - API client and HTTP request utilities
+  - **auth-client.ts** - Better Auth client configuration
+  - **googleMaps.ts** - Google Maps API loader and utilities
+</Accordion>
+
+### Types (`src/types/`)
+
+TypeScript type definitions and interfaces.
+
+<Accordion title="Type Files">
+  - **api.ts** - API response types and request payloads
+  - **index.ts** - Core application types (Property, User, etc.)
+</Accordion>
+
+### Utils (`src/utils/`)
+
+Utility functions and helper modules.
+
+<CardGroup cols={2}>
+  <Card title="authErrorTranslator.ts" icon="language">
+    Translate auth errors to Spanish
+  </Card>
+  <Card title="errorHandler.ts" icon="triangle-exclamation">
+    Global error handling utilities
+  </Card>
+  <Card title="search.ts" icon="magnifying-glass">
+    Search and filter logic
+  </Card>
+  <Card title="seo.ts" icon="chart-line">
+    SEO utilities and meta tag generation
+  </Card>
+  <Card title="youtube.ts" icon="video">
+    YouTube embed helpers
+  </Card>
+  <Card title="index.ts" icon="box">
+    General utility functions
+  </Card>
+</CardGroup>
+
+## File Naming Conventions
+
+<AccordionGroup>
+  <Accordion title="Components & Pages">
+    Use **PascalCase** for React component files:
+    ```
+    PropertyCard.tsx
+    HomePage.tsx
+    AddressAutocomplete.tsx
+    ```
+  </Accordion>
+
+  <Accordion title="Routes">
+    Use **kebab-case** and TanStack Router conventions:
+    ```
+    index.tsx              → /
+    nosotros.tsx          → /nosotros
+    quiero-vender.tsx     → /quiero-vender
+    $propertyId.tsx       → /:propertyId (dynamic)
+    p.$slug.tsx           → /p/:slug (dynamic)
+    ```
+  </Accordion>
+
+  <Accordion title="Utilities & Hooks">
+    Use **camelCase** for non-component files:
+    ```
+    usePermissions.ts
+    authErrorTranslator.ts
+    search.ts
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Entry Point
+
+### `src/main.tsx`
+
+The application entry point that:
+1. Imports global CSS (Tailwind)
+2. Creates the TanStack Router instance
+3. Configures the Toaster for notifications
+4. Renders the app with StrictMode
+
+```typescript title="src/main.tsx" {11-14}
+import { RouterProvider, createRouter } from "@tanstack/react-router";
+import { routeTree } from "./routeTree.gen";
+
+// Create router with configuration
+const router = createRouter({
+  routeTree,
+  scrollRestoration: true,
+});
+
+// Register for type safety
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
+```
+
+## Root Layout
+
+### `src/routes/__root.tsx`
+
+Defines the root layout that wraps all routes:
+
+```typescript title="src/routes/__root.tsx"
+export const Route = createRootRoute({
+  component: () => (
+    <AuthProvider>
+      <Header />
+      <Outlet />  {/* Child routes render here */}
+      <Footer />
+      <WhatsAppButton />
+      <TanStackRouterDevtools />
+    </AuthProvider>
+  ),
+});
+```
+
+<Note>
+  The `<Outlet />` component is where child routes are rendered. This pattern enables nested layouts.
+</Note>
+
+## Component Organization Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Single Responsibility" icon="bullseye">
+    Each component should have one clear purpose
+  </Card>
+  <Card title="Composition" icon="puzzle-piece">
+    Build complex UIs by composing smaller components
+  </Card>
+  <Card title="Colocate Logic" icon="layer-group">
+    Keep related code together in the same file
+  </Card>
+  <Card title="Type Safety" icon="shield-check">
+    Use TypeScript interfaces and types extensively
+  </Card>
+</CardGroup>
+
+## Assets
+
+### `src/assets/`
+
+Static assets like images, fonts, and other media files.
+
+```
+assets/
+└── unnamed.webp  # Example image asset
+```
+
+<Tip>
+  Use WebP format for images to optimize file size and performance.
+</Tip>
+
+## Generated Files
+
+<Warning>
+  **Never edit these files manually** - they are automatically generated:
+  
+  - `src/routeTree.gen.ts` - Generated by TanStack Router plugin
+  - Build output in `dist/` directory
+</Warning>
+
+## Configuration Files (Root)
+
+```
+project-root/
+├── vite.config.ts       # Vite configuration
+├── tailwind.config.js   # Tailwind CSS configuration
+├── tsconfig.json        # TypeScript configuration
+├── eslint.config.js     # ESLint rules
+├── postcss.config.js    # PostCSS plugins
+├── package.json         # Dependencies and scripts
+└── index.html           # HTML entry point
+```
+
+## Import Aliases
+
+The project uses relative imports. For example:
+
+```typescript
+// From a route file
+import HomePage from "../pages/HomePage";
+import { authClient } from "../lib/auth-client";
+
+// From a component
+import { AuthContext } from "../contexts/AuthContext";
+import { usePermissions } from "../hooks/usePermissions";
+```
+
+<Tip>
+  Consider adding path aliases in `tsconfig.json` for cleaner imports:
+  ```json
+  "paths": {
+    "@/components/*": ["./src/components/*"],
+    "@/lib/*": ["./src/lib/*"]
+  }
+  ```
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tech Stack" icon="layer-group" href="/development/tech-stack">
+    Explore the technologies used
+  </Card>
+  <Card title="Routing" icon="route" href="/development/routing">
+    Learn about the routing system
+  </Card>
+</CardGroup>

@@ -1,0 +1,569 @@
+---
+title: Properties API
+description: Endpoints for managing property listings, including create, read, update, delete, and favorites operations
+---
+
+## Overview
+
+The Properties API provides comprehensive endpoints for managing real estate listings. All property operations require authentication except for listing and retrieving individual properties.
+
+**Base Path:** `/api/properties`
+
+---
+
+## List Properties
+
+<CodeGroup>
+```typescript GET /properties
+const response = await api.properties.list({
+  query: "departamento",
+  propertyType: ["casa", "departamento"],
+  listingType: ["venta"],
+  minPrice: 50000,
+  maxPrice: 200000,
+  bedrooms: 2,
+  bathrooms: 1,
+  location: "Buenos Aires",
+  page: 1,
+  limit: 10
+});
+```
+</CodeGroup>
+
+Retrieve a paginated list of properties with optional filtering.
+
+### Query Parameters
+
+<ParamField query="query" type="string">
+  Search text to match in property title or description
+</ParamField>
+
+<ParamField query="propertyType" type="string[]">
+  Filter by property types (casa, departamento, ph, terreno, local, galpon, oficina, campo, deposito, bodega, consultorio, fondo-comercio, hotel, cochera)
+</ParamField>
+
+<ParamField query="listingType" type="string[]">
+  Filter by operation types (venta, alquiler, alquiler-temporal, permuta)
+</ParamField>
+
+<ParamField query="status" type="string[]">
+  Filter by property status (activo, pendiente, vendido, alquilado, pausado)
+</ParamField>
+
+<ParamField query="minPrice" type="number">
+  Minimum price filter
+</ParamField>
+
+<ParamField query="maxPrice" type="number">
+  Maximum price filter
+</ParamField>
+
+<ParamField query="bedrooms" type="number">
+  Minimum number of bedrooms
+</ParamField>
+
+<ParamField query="bathrooms" type="number">
+  Minimum number of bathrooms
+</ParamField>
+
+<ParamField query="location" type="string">
+  Location search (city, province, neighborhood)
+</ParamField>
+
+<ParamField query="page" type="number" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="number" default="10">
+  Number of items per page
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="Property[]" required>
+  Array of property objects
+  
+  <Expandable title="Property object structure">
+    <ResponseField name="id" type="string">
+      Unique property identifier
+    </ResponseField>
+    
+    <ResponseField name="slug" type="string">
+      URL-friendly property slug
+    </ResponseField>
+    
+    <ResponseField name="title" type="string">
+      Property title
+    </ResponseField>
+    
+    <ResponseField name="description" type="string">
+      Detailed property description
+    </ResponseField>
+    
+    <ResponseField name="price" type="number">
+      Property price
+    </ResponseField>
+    
+    <ResponseField name="currency" type="string">
+      Currency code (ARS, USD, EUR)
+    </ResponseField>
+    
+    <ResponseField name="propertyType" type="string">
+      Type of property
+    </ResponseField>
+    
+    <ResponseField name="listingType" type="string">
+      Operation type (venta, alquiler)
+    </ResponseField>
+    
+    <ResponseField name="bedrooms" type="number">
+      Number of bedrooms
+    </ResponseField>
+    
+    <ResponseField name="bathrooms" type="number">
+      Number of bathrooms
+    </ResponseField>
+    
+    <ResponseField name="squareFeet" type="number">
+      Total surface area in m²
+    </ResponseField>
+    
+    <ResponseField name="images" type="string[]">
+      Array of image URLs
+    </ResponseField>
+    
+    <ResponseField name="location" type="object">
+      Location details with city, province, and optional coordinates
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Property status
+    </ResponseField>
+    
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="pagination" type="object" required>
+  Pagination metadata
+  
+  <Expandable title="Pagination structure">
+    <ResponseField name="currentPage" type="number">
+      Current page number
+    </ResponseField>
+    
+    <ResponseField name="totalPages" type="number">
+      Total number of pages
+    </ResponseField>
+    
+    <ResponseField name="totalItems" type="number">
+      Total number of properties
+    </ResponseField>
+    
+    <ResponseField name="limit" type="number">
+      Items per page
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Usage Example
+
+From `src/pages/ListingsPage.tsx:112`:
+
+```typescript
+const response = await api.properties.list(filtersToSend);
+setProperties(response.data);
+setTotalPages(response.pagination.totalPages);
+```
+
+---
+
+## Get Property by ID
+
+<CodeGroup>
+```typescript GET /properties/:id
+const response = await api.properties.get("123");
+```
+</CodeGroup>
+
+Retrieve a single property by its numeric ID.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique property ID
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="Property" required>
+  Complete property object with all fields, images, location, and metadata
+</ResponseField>
+
+### Usage Example
+
+From `src/routes/propiedades.$propertyId.tsx:24`:
+
+```typescript
+const response = await api.properties.get(propertyId);
+return response.data;
+```
+
+---
+
+## Get Property by Slug
+
+<CodeGroup>
+```typescript GET /properties/slug/:slug
+const response = await api.properties.getBySlug("casa-3-dormitorios-palermo");
+```
+</CodeGroup>
+
+Retrieve a single property by its URL-friendly slug.
+
+### Path Parameters
+
+<ParamField path="slug" type="string" required>
+  The URL-friendly property slug
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="Property" required>
+  Complete property object
+</ResponseField>
+
+### Usage Example
+
+From `src/routes/listings/p/$slug.tsx:23`:
+
+```typescript
+const response = await api.properties.getBySlug(slug);
+return response.data;
+```
+
+---
+
+## Create Property
+
+<CodeGroup>
+```typescript POST /properties
+const formData = new FormData();
+formData.append("title", "Casa en Palermo");
+formData.append("description", "Hermosa casa con jardín");
+formData.append("price", "250000");
+formData.append("propertyTypeId", "1");
+formData.append("operationTypeId", "1");
+formData.append("bedrooms", "3");
+formData.append("bathrooms", "2");
+formData.append("images", imageFile);
+
+const response = await api.properties.create(formData);
+```
+</CodeGroup>
+
+Create a new property listing. Requires admin authentication.
+
+### Request Body
+
+Multipart form data with the following fields:
+
+<ParamField body="title" type="string" required>
+  Property title (max 255 characters)
+</ParamField>
+
+<ParamField body="description" type="string" required>
+  Detailed property description
+</ParamField>
+
+<ParamField body="price" type="number" required>
+  Property price
+</ParamField>
+
+<ParamField body="propertyTypeId" type="number" required>
+  Property type ID (from metadata)
+</ParamField>
+
+<ParamField body="operationTypeId" type="number" required>
+  Operation type ID (from metadata)
+</ParamField>
+
+<ParamField body="bedrooms" type="number" required>
+  Number of bedrooms
+</ParamField>
+
+<ParamField body="bathrooms" type="number" required>
+  Number of bathrooms
+</ParamField>
+
+<ParamField body="surfaceCoveredM2" type="number">
+  Covered surface area in m²
+</ParamField>
+
+<ParamField body="images" type="File[]">
+  Property images (multiple files supported)
+</ParamField>
+
+<ParamField body="city" type="string" required>
+  City name
+</ParamField>
+
+<ParamField body="province" type="string" required>
+  Province/state name
+</ParamField>
+
+<ParamField body="street" type="string">
+  Street name
+</ParamField>
+
+<ParamField body="latitude" type="number">
+  Latitude coordinate
+</ParamField>
+
+<ParamField body="longitude" type="number">
+  Longitude coordinate
+</ParamField>
+
+<ParamField body="features" type="string">
+  Comma-separated feature IDs
+</ParamField>
+
+<ParamField body="tags" type="string">
+  Comma-separated tag IDs
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the property was created successfully
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  <Expandable title="Created property response">
+    <ResponseField name="id" type="string">
+      ID of the newly created property
+    </ResponseField>
+    
+    <ResponseField name="slug" type="string">
+      Generated URL slug
+    </ResponseField>
+    
+    <ResponseField name="message" type="string">
+      Success message
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Usage Example
+
+From `src/pages/PropertyFormPage.tsx:1154`:
+
+```typescript
+await api.properties.create(formData);
+toast.success("Propiedad creada exitosamente");
+```
+
+---
+
+## Update Property
+
+<CodeGroup>
+```typescript PUT /properties/:id
+const formData = new FormData();
+formData.append("title", "Casa Renovada en Palermo");
+formData.append("price", "280000");
+
+const response = await api.properties.update("123", formData);
+```
+</CodeGroup>
+
+Update an existing property. Requires admin authentication.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The property ID to update
+</ParamField>
+
+### Request Body
+
+Multipart form data with fields to update (same structure as create endpoint, all fields optional).
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the update was successful
+</ResponseField>
+
+<ResponseField name="data" type="Property" required>
+  The updated property object
+</ResponseField>
+
+### Usage Example
+
+From `src/pages/PropertyFormPage.tsx:1141`:
+
+```typescript
+const response = await api.properties.update(propertyId, formData);
+toast.success("Propiedad actualizada exitosamente");
+```
+
+---
+
+## Delete Property
+
+<CodeGroup>
+```typescript DELETE /properties/:id
+const response = await api.properties.delete("123");
+```
+</CodeGroup>
+
+Permanently delete a property. Requires admin authentication.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The property ID to delete
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the deletion was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Confirmation message
+</ResponseField>
+
+### Usage Example
+
+From `src/pages/AdminPage.tsx:113`:
+
+```typescript
+await api.properties.delete(deleteModal.propertyId);
+toast.success("Propiedad eliminada");
+```
+
+---
+
+## Add to Favorites
+
+<CodeGroup>
+```typescript POST /properties/:id/favorite
+const response = await api.properties.addToFavorites("123");
+```
+</CodeGroup>
+
+Add a property to the authenticated user's favorites list.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The property ID to favorite
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the property was added to favorites
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+### Usage Example
+
+From `src/contexts/AuthContext.tsx:336`:
+
+```typescript
+await api.properties.addToFavorites(propertyId);
+setFavoriteIds((prev) => [...prev, propertyId]);
+```
+
+---
+
+## Remove from Favorites
+
+<CodeGroup>
+```typescript DELETE /properties/:id/favorite
+const response = await api.properties.removeFromFavorites("123");
+```
+</CodeGroup>
+
+Remove a property from the authenticated user's favorites list.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The property ID to unfavorite
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the property was removed from favorites
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+### Usage Example
+
+From `src/contexts/AuthContext.tsx:349`:
+
+```typescript
+await api.properties.removeFromFavorites(propertyId);
+setFavoriteIds((prev) => prev.filter((id) => id !== propertyId));
+```
+
+---
+
+## Error Responses
+
+All endpoints may return the following error responses:
+
+<ResponseField name="error" type="object">
+  <Expandable title="Error structure">
+    <ResponseField name="message" type="string">
+      Human-readable error message
+    </ResponseField>
+    
+    <ResponseField name="code" type="string">
+      Error code (e.g., "UNAUTHORIZED", "NOT_FOUND", "VALIDATION_ERROR")
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Common Status Codes
+
+- `200` - Success
+- `400` - Bad Request (invalid parameters)
+- `401` - Unauthorized (authentication required)
+- `403` - Forbidden (insufficient permissions)
+- `404` - Not Found (property doesn't exist)
+- `500` - Internal Server Error
+
+---
+
+## Related Documentation
+
+- [Users API](/api/users) - User profile and favorites management
+- [Metadata API](/api/metadata) - Property types, features, and tags
+- [Admin API](/api/admin) - Administrative operations

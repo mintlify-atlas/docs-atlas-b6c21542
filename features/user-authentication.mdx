@@ -1,0 +1,624 @@
+---
+title: User Authentication
+description: Secure user authentication with email/password login, registration, session management, and password reset using Better Auth
+---
+
+The authentication system provides secure user login, registration, and session management using Better Auth, a modern authentication library for React applications.
+
+## Overview
+
+Authentication features include:
+
+- Email/password authentication
+- User registration with email verification
+- Persistent sessions with cookies
+- Password reset functionality
+- Protected routes and components
+- Real-time session refresh
+- User favorites management
+
+## Authentication Context
+
+The `AuthContext` provides authentication state and methods throughout the application.
+
+**Location**: `src/contexts/AuthContext.tsx`
+
+### Context Structure
+
+```typescript AuthContext Interface
+interface AuthContextType {
+  // Current user state
+  user: User | null;
+  loading: boolean;
+  error: string | null;
+  favoritePropertyIds: string[];
+  refreshingSession: boolean;
+
+  // Authentication methods
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  refreshSession: () => Promise<User | null>;
+
+  // Favorites management
+  addToFavorites: (propertyId: string) => Promise<void>;
+  removeFromFavorites: (propertyId: string) => Promise<void>;
+  isFavorite: (propertyId: string) => boolean;
+
+  // Password reset
+  requestPasswordReset: (email: string) => Promise<void>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
+}
+```
+
+### Using the Auth Context
+
+```tsx Using Auth in Components
+import { useAuth } from "../contexts/AuthContext";
+
+const MyComponent = () => {
+  const { user, signIn, signOut, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    return (
+      <button onClick={() => signIn("user@example.com", "password")}>
+        Sign In
+      </button>
+    );
+  }
+
+  return (
+    <div>
+      <p>Welcome, {user.name}!</p>
+      <button onClick={signOut}>Sign Out</button>
+    </div>
+  );
+};
+```
+
+## Authentication Methods
+
+### Sign In
+
+Authenticate users with email and password.
+
+<Steps>
+
+<Step title="Call signIn Method">
+```tsx Sign In Implementation
+const signIn = async (email: string, password: string) => {
+  setAuthState((prev) => ({
+    ...prev,
+    loading: true,
+    error: null,
+  }));
+
+  try {
+    const response = await authClient.signIn.email({
+      email,
+      password,
+    });
+
+    const { error } = response;
+
+    if (error) {
+      throw error;
+    }
+
+    // Refresh session to load user data
+    await refreshSession();
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : "Error al iniciar sesión";
+    const translatedError = translateAuthError(errorMessage);
+
+    setAuthState((prev) => ({
+      ...prev,
+      loading: false,
+      error: translatedError,
+    }));
+
+    throw new Error(translatedError);
+  }
+};
+```
+</Step>
+
+<Step title="Handle Response">
+On successful authentication, the session is refreshed to load user data and favorites.
+
+```tsx
+// Refresh session after sign in
+await refreshSession();
+```
+</Step>
+
+<Step title="Error Handling">
+Errors are translated to user-friendly Spanish messages.
+
+```tsx
+const translatedError = translateAuthError(errorMessage);
+// "Invalid credentials" → "Credenciales inválidas"
+// "User not found" → "Usuario no encontrado"
+```
+</Step>
+
+</Steps>
+
+### Sign Up
+
+Register new users with email, password, and name.
+
+```tsx Sign Up Implementation
+const signUp = async (email: string, password: string, name: string) => {
+  setAuthState((prev) => ({
+    ...prev,
+    loading: true,
+    error: null,
+  }));
+
+  try {
+    const response = await authClient.signUp.email({
+      email,
+      password,
+      name,
+      callbackURL: "/",
+    });
+
+    const { error } = response;
+
+    if (error) {
+      throw error;
+    }
+
+    // Note: Session is NOT refreshed here
+    // User must verify email first
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : "Error al crear cuenta";
+    const translatedError = translateAuthError(errorMessage);
+
+    setAuthState((prev) => ({
+      ...prev,
+      loading: false,
+      error: translatedError,
+    }));
+
+    throw new Error(translatedError);
+  }
+};
+```
+
+<Note>
+  After registration, users may need to verify their email before signing in, depending on your Better Auth configuration.
+</Note>
+
+### Sign Out
+
+End the user session and clear authentication state.
+
+```tsx Sign Out Implementation
+const signOut = async () => {
+  setAuthState((prev) => ({ ...prev, loading: true }));
+
+  try {
+    await authClient.signOut();
+    
+    setAuthState({
+      user: null,
+      loading: false,
+      error: null,
+      favoritePropertyIds: [],
+      refreshingSession: false,
+    });
+  } catch {
+    setAuthState((prev) => ({
+      ...prev,
+      loading: false,
+      error: "Error al cerrar sesión",
+    }));
+  }
+};
+```
+
+### Session Refresh
+
+Reload user data and verify session validity.
+
+```tsx Refresh Session
+const refreshSession = useCallback(async () => {
+  // Prevent multiple simultaneous refresh calls
+  if (authState.refreshingSession) {
+    return authState.user;
+  }
+
+  setAuthState((prev) => ({ ...prev, refreshingSession: true }));
+
+  try {
+    const { data } = await authClient.getSession();
+
+    if (data?.user) {
+      const user = data.user as unknown as User;
+      
+      // Fetch user favorites
+      try {
+        const favoritesResponse = await api.users.getFavorites();
+        const favoriteIds = favoritesResponse.data?.map(
+          (property: Property) => property.id
+        ) || [];
+
+        setAuthState({
+          user: user,
+          loading: false,
+          error: null,
+          favoritePropertyIds: favoriteIds,
+          refreshingSession: false,
+        });
+      } catch {
+        // Set user even if favorites fail
+        setAuthState({
+          user: user,
+          loading: false,
+          error: null,
+          favoritePropertyIds: [],
+          refreshingSession: false,
+        });
+      }
+
+      return user;
+    } else {
+      setAuthState({
+        user: null,
+        loading: false,
+        error: null,
+        favoritePropertyIds: [],
+        refreshingSession: false,
+      });
+      return null;
+    }
+  } catch {
+    setAuthState({
+      user: null,
+      loading: false,
+      error: null,
+      favoritePropertyIds: [],
+      refreshingSession: false,
+    });
+    return null;
+  }
+}, [authState.refreshingSession, authState.user]);
+```
+
+## Password Reset
+
+Allow users to reset forgotten passwords.
+
+<Steps>
+
+<Step title="Request Password Reset">
+User provides their email to receive a reset link.
+
+```tsx Request Reset
+const requestPasswordReset = async (email: string) => {
+  try {
+    const response = await authClient.forgetPassword({
+      email,
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    const { error } = response;
+
+    if (error) {
+      throw error;
+    }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : "Error al solicitar restablecimiento de contraseña";
+    const translatedError = translateAuthError(errorMessage);
+    throw new Error(translatedError);
+  }
+};
+```
+</Step>
+
+<Step title="Reset Password">
+User clicks the link in their email and provides a new password.
+
+```tsx Reset Password
+const resetPassword = async (token: string, newPassword: string) => {
+  setAuthState((prev) => ({
+    ...prev,
+    loading: true,
+    error: null,
+  }));
+
+  try {
+    const { error } = await authClient.resetPassword({
+      newPassword,
+      token,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    // User needs to sign in manually after reset
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : "Error al restablecer contraseña";
+    const translatedError = translateAuthError(errorMessage);
+
+    setAuthState((prev) => ({
+      ...prev,
+      loading: false,
+      error: translatedError,
+    }));
+
+    throw new Error(translatedError);
+  }
+};
+```
+</Step>
+
+</Steps>
+
+<Warning>
+  After resetting their password, users must sign in manually. Better Auth does not automatically create a session after password reset.
+</Warning>
+
+## API Integration
+
+Authentication uses both Better Auth client and custom API endpoints.
+
+### Better Auth Client
+
+```typescript Better Auth Setup
+// src/lib/auth-client.ts
+import { createAuthClient } from "better-auth/react";
+
+export const authClient = createAuthClient({
+  baseURL: API_BASE,
+});
+```
+
+### User API Endpoints
+
+```typescript User API Methods
+// src/lib/api.ts
+users: {
+  getProfile: () => apiCall("/users/profile"),
+
+  updateProfile: (data: any) =>
+    apiCall("/users/profile", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  getFavorites: () => apiCall("/users/favorites"),
+}
+```
+
+## Protected Routes
+
+Protect routes that require authentication.
+
+```tsx Protected Route Component
+import { useAuth } from "../contexts/AuthContext";
+import { Navigate } from "@tanstack/react-router";
+
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" />;
+  }
+
+  return children;
+};
+
+// Usage
+<Route path="/favorites" component={ProtectedRoute}>
+  <FavoritesPage />
+</Route>
+```
+
+## User Roles
+
+The system supports different user roles for access control.
+
+<Tabs>
+  <Tab title="User">
+    Default role for all registered users.
+    
+    **Permissions**:
+    - Browse properties
+    - Save favorites
+    - Contact property owners
+    - Update profile
+  </Tab>
+  
+  <Tab title="Admin">
+    Administrative role with elevated permissions.
+    
+    **Permissions**:
+    - All user permissions
+    - Create and edit properties
+    - Manage property status
+    - View analytics
+    - Manage users
+  </Tab>
+</Tabs>
+
+```typescript Role Check
+const isAdmin = user?.role === "admin";
+
+if (isAdmin) {
+  // Show admin controls
+}
+```
+
+## Database Schema
+
+The authentication system uses the following database tables:
+
+<CodeGroup>
+
+```sql users
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255),
+    image TEXT,
+    email_verified TIMESTAMP,
+    role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+```sql sessions
+CREATE TABLE sessions (
+    id SERIAL PRIMARY KEY,
+    session_token VARCHAR(255) NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+```sql accounts
+CREATE TABLE accounts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type VARCHAR(50) NOT NULL,
+    provider VARCHAR(50) NOT NULL,
+    provider_account_id VARCHAR(255) NOT NULL,
+    refresh_token TEXT,
+    access_token TEXT,
+    expires_at INTEGER,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+</CodeGroup>
+
+## Session Management
+
+<Steps>
+
+<Step title="Session Initialization">
+On app load, verify if a valid session exists.
+
+```tsx
+useEffect(() => {
+  const initSession = async () => {
+    try {
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Session timeout")), 5000);
+      });
+
+      await Promise.race([refreshSession(), timeoutPromise]);
+    } catch {
+      setAuthState((prev) => ({
+        ...prev,
+        loading: false,
+        user: null,
+      }));
+    }
+  };
+
+  initSession();
+}, []);
+```
+</Step>
+
+<Step title="Session Persistence">
+Sessions are stored in HTTP-only cookies for security.
+
+```typescript
+const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+  const response = await fetch(url, {
+    credentials: "include", // Send cookies
+    ...options,
+  });
+  
+  return response.json();
+};
+```
+</Step>
+
+<Step title="Session Expiration">
+Sessions automatically expire based on the configured timeout. Users must sign in again after expiration.
+</Step>
+
+</Steps>
+
+## Error Handling
+
+Authentication errors are translated to user-friendly messages.
+
+```typescript Error Translation
+// src/utils/authErrorTranslator.ts
+export const translateAuthError = (error: string): string => {
+  const errorMap: Record<string, string> = {
+    "Invalid credentials": "Credenciales inválidas",
+    "User not found": "Usuario no encontrado",
+    "Email already exists": "El correo ya está registrado",
+    "Invalid token": "Token inválido o expirado",
+    "Session expired": "Sesión expirada",
+  };
+
+  return errorMap[error] || "Error de autenticación";
+};
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Security">
+    - Store sessions in HTTP-only cookies
+    - Use HTTPS in production
+    - Implement CSRF protection
+    - Validate email addresses
+    - Enforce strong passwords
+    - Rate limit authentication attempts
+  </Accordion>
+
+  <Accordion title="User Experience">
+    - Show loading states during authentication
+    - Provide clear error messages
+    - Auto-clear errors after timeout
+    - Remember user preferences
+    - Smooth transitions between auth states
+  </Accordion>
+
+  <Accordion title="Performance">
+    - Prevent multiple simultaneous session refreshes
+    - Cache user data appropriately
+    - Lazy load protected components
+    - Optimize session validation
+  </Accordion>
+</AccordionGroup>
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="Favorites" icon="heart" href="/features/favorites">
+    Manage favorite properties (requires authentication)
+  </Card>
+  <Card title="Property Management" icon="building" href="/features/property-management">
+    Create and edit properties (admin only)
+  </Card>
+</CardGroup>

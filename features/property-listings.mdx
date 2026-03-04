@@ -1,0 +1,415 @@
+---
+title: Property Listings
+description: Browse and display property listings with advanced filtering, search, and responsive grid/list views
+---
+
+The property listings feature provides a comprehensive interface for users to browse available properties with powerful filtering, search, and display options.
+
+## Overview
+
+Property listings are displayed on the `/propiedades` route and provide:
+
+- Real-time property search and filtering
+- Grid and list view modes
+- Responsive design for mobile and desktop
+- Status-based property prioritization
+- URL-shareable filters
+
+## Key Components
+
+### ListingsPage Component
+
+The main listings page integrates search, filtering, and property display.
+
+**Location**: `src/pages/ListingsPage.tsx`
+
+<CodeGroup>
+```tsx Core Functionality
+import { api } from "../lib/api";
+import PropertyCard from "../components/PropertyCard";
+import FilterSidebar from "../components/FilterSidebar";
+import ListingsSearchBar from "../components/ListingsSearchBar";
+
+const ListingsPage = () => {
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [searchFilters, setSearchFilters] = useState<PropertyFilters>({
+    query: searchParams.query || "",
+    propertyType: [],
+    listingType: [],
+    minPrice: undefined,
+    maxPrice: undefined,
+    bedrooms: undefined,
+    bathrooms: undefined,
+    location: "",
+    page: 1,
+    limit: 20,
+  });
+
+  // Fetch properties when filters change
+  useEffect(() => {
+    const fetchProperties = async () => {
+      const response = await api.properties.list(searchFilters);
+      let data = response.data || [];
+      
+      // Apply client-side search if query exists
+      if (searchFilters.query) {
+        data = searchProperties(data, searchFilters.query);
+      }
+      
+      setProperties(sortPropertiesByStatusPriority(data));
+    };
+    
+    fetchProperties();
+  }, [searchFilters]);
+};
+```
+
+```tsx URL Synchronization
+// Sync filters with URL for shareable links
+useEffect(() => {
+  const newSearch = { ...searchFilters };
+  
+  // Clean up undefined values
+  for (const key in newSearch) {
+    const value = newSearch[key];
+    if (value === undefined || value === null || 
+        value === "" || (Array.isArray(value) && value.length === 0)) {
+      delete newSearch[key];
+    }
+  }
+
+  navigate({
+    search: (prev) => ({ ...prev, ...newSearch }),
+    replace: true,
+  });
+}, [searchFilters, navigate]);
+```
+</CodeGroup>
+
+### PropertyCard Component
+
+Displays individual property information in a card format.
+
+**Location**: `src/components/PropertyCard.tsx`
+
+<CodeGroup>
+```tsx Property Display
+const PropertyCard = ({ property }: PropertyCardProps) => {
+  const { user, addToFavorites, removeFromFavorites, isFavorite } = useAuth();
+
+  return (
+    <div className="bg-white rounded-lg shadow-md overflow-hidden group">
+      {/* Property Image */}
+      <img
+        src={getMainImageUrl(property) || getPropertyPlaceholderImage()}
+        alt={property.title}
+        className="w-full h-48 object-cover group-hover:scale-105"
+      />
+
+      {/* Status Overlay for sold/rented properties */}
+      {property.status && ['vendido', 'alquilado'].includes(property.status) && (
+        <div className="absolute top-0 left-0 right-0 bottom-0">
+          <span className="text-sm font-bold uppercase">
+            {getStatusLabel(property.status)}
+          </span>
+        </div>
+      )}
+
+      {/* Property Details */}
+      <div className="p-4">
+        <h3 className="text-lg font-semibold line-clamp-2">
+          {property.title}
+        </h3>
+        
+        <div className="text-xl font-bold">
+          ${property.price.toLocaleString()} {property.currency}
+        </div>
+
+        {/* Property Stats */}
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          {property.rooms > 0 && (
+            <div className="flex items-center space-x-1">
+              <LayoutGrid className="h-4 w-4" />
+              <span>{property.rooms} Ambientes</span>
+            </div>
+          )}
+          {property.bedrooms > 0 && (
+            <div className="flex items-center space-x-1">
+              <Bed className="h-4 w-4" />
+              <span>{property.bedrooms} Dormitorios</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+```tsx Favorite Button
+// Favorite button with authentication check
+const handleFavoriteClick = async (e: React.MouseEvent) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (!user) {
+    setShowLoginModal(true);
+    return;
+  }
+
+  try {
+    setIsFavoriting(true);
+    if (isFavorite(property.id)) {
+      await removeFromFavorites(property.id);
+    } else {
+      await addToFavorites(property.id);
+    }
+  } finally {
+    setIsFavoriting(false);
+  }
+};
+
+<button
+  onClick={handleFavoriteClick}
+  className={`absolute top-3 right-3 p-2 rounded-full ${
+    isFavorite(property.id) 
+      ? 'bg-red-800 text-white' 
+      : 'bg-white text-gray-600'
+  }`}
+>
+  <Heart className={isFavorite(property.id) ? 'fill-current' : ''} />
+</button>
+```
+</CodeGroup>
+
+## Filtering System
+
+### FilterSidebar Component
+
+Provides advanced filtering options for property search.
+
+**Location**: `src/components/FilterSidebar.tsx`
+
+<Steps>
+
+<Step title="Load Metadata">
+Fetch available property types, operation types, and other metadata from the API.
+
+```tsx
+const [metadata, setMetadata] = useState<any>(null);
+
+useEffect(() => {
+  const fetchMetadata = async () => {
+    const response = await api.metadata.getAll();
+    setMetadata(response.data);
+  };
+  fetchMetadata();
+}, []);
+```
+</Step>
+
+<Step title="Property Type Filters">
+Multi-select checkboxes for property types (casa, departamento, etc.).
+
+```tsx
+const handlePropertyTypeChange = (typeSlug: string, checked: boolean) => {
+  setSearchFilters({
+    ...searchFilters,
+    propertyType: checked
+      ? [...(searchFilters.propertyType || []), typeSlug]
+      : (searchFilters.propertyType || []).filter((t) => t !== typeSlug),
+  });
+};
+
+<CheckboxOption
+  label="Casa"
+  checked={(searchFilters.propertyType || []).includes('casa')}
+  onChange={(checked) => handlePropertyTypeChange('casa', checked)}
+/>
+```
+</Step>
+
+<Step title="Bedroom and Bathroom Filters">
+Button-based selection for minimum bedrooms and bathrooms.
+
+```tsx
+const handleBedroomChange = (bedrooms: number) => {
+  setSearchFilters({
+    ...searchFilters,
+    bedrooms: searchFilters.bedrooms === bedrooms ? undefined : bedrooms,
+  });
+};
+
+<button
+  onClick={() => handleBedroomChange(3)}
+  className={`px-4 py-2 rounded-full ${
+    searchFilters.bedrooms === 3 
+      ? 'bg-red-600 text-white' 
+      : 'bg-gray-100'
+  }`}
+>
+  3+
+</button>
+```
+</Step>
+
+</Steps>
+
+## API Integration
+
+### Fetching Properties
+
+Properties are fetched using the properties API endpoint with filter parameters.
+
+```typescript Property List API
+// src/lib/api.ts
+properties: {
+  list: (params?: PropertyFilters) => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            value.forEach((v) => searchParams.append(key, String(v)));
+          } else {
+            searchParams.append(key, String(value));
+          }
+        }
+      });
+    }
+    return apiCall(`/properties${searchParams.toString() ? `?${searchParams}` : ""}`);
+  },
+}
+```
+
+### Filter Parameters
+
+<ParamField path="query" type="string">
+  Free-text search query across all property fields
+</ParamField>
+
+<ParamField path="propertyType" type="string[]">
+  Array of property type slugs (casa, departamento, terreno, etc.)
+</ParamField>
+
+<ParamField path="listingType" type="string[]">
+  Array of operation types (venta, alquiler, alquiler-temporal)
+</ParamField>
+
+<ParamField path="minPrice" type="number">
+  Minimum price filter
+</ParamField>
+
+<ParamField path="maxPrice" type="number">
+  Maximum price filter
+</ParamField>
+
+<ParamField path="bedrooms" type="number">
+  Minimum number of bedrooms
+</ParamField>
+
+<ParamField path="bathrooms" type="number">
+  Minimum number of bathrooms
+</ParamField>
+
+<ParamField path="location" type="string">
+  Location search (city, neighborhood, province)
+</ParamField>
+
+<ParamField path="page" type="number" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField path="limit" type="number" default="20">
+  Number of results per page
+</ParamField>
+
+## Property Sorting
+
+Properties are sorted to prioritize active listings over sold/rented properties.
+
+```typescript Priority Sorting
+// src/utils/index.ts
+export const sortPropertiesByStatusPriority = (properties: Property[]) => {
+  const statusPriority: Record<string, number> = {
+    activo: 1,
+    pendiente: 2,
+    pausado: 3,
+    reservado: 4,
+    alquilado: 5,
+    vendido: 6,
+  };
+
+  return [...properties].sort((a, b) => {
+    const aPriority = statusPriority[a.status] || 999;
+    const bPriority = statusPriority[b.status] || 999;
+    return aPriority - bPriority;
+  });
+};
+```
+
+## Responsive Design
+
+The listings page adapts to different screen sizes:
+
+<Tabs>
+  <Tab title="Mobile">
+    - Single column grid
+    - Slide-out filter sidebar
+    - Touch-friendly buttons
+    - Simplified property cards
+  </Tab>
+  <Tab title="Tablet">
+    - Two-column grid
+    - Collapsible filter sidebar
+    - Touch and mouse support
+  </Tab>
+  <Tab title="Desktop">
+    - Three-column grid
+    - Persistent filter sidebar
+    - Hover effects and transitions
+    - Keyboard navigation
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Performance Optimization">
+    - Fetch properties with appropriate limits (default 20)
+    - Implement pagination for large result sets
+    - Cache metadata to avoid repeated API calls
+    - Use client-side filtering for real-time search
+  </Accordion>
+
+  <Accordion title="User Experience">
+    - Show loading states during data fetching
+    - Display active filters with removal options
+    - Provide clear empty state messages
+    - Enable URL sharing for filtered results
+  </Accordion>
+
+  <Accordion title="Accessibility">
+    - Use semantic HTML elements
+    - Add ARIA labels to interactive elements
+    - Support keyboard navigation
+    - Ensure sufficient color contrast
+  </Accordion>
+</AccordionGroup>
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="Search Functionality" icon="magnifying-glass" href="/features/search-functionality">
+    Advanced search with synonyms and autocomplete
+  </Card>
+  <Card title="Favorites" icon="heart" href="/features/favorites">
+    Save and manage favorite properties
+  </Card>
+  <Card title="Property Management" icon="building" href="/features/property-management">
+    Create and edit property listings
+  </Card>
+  <Card title="User Authentication" icon="user" href="/features/user-authentication">
+    Login and user session management
+  </Card>
+</CardGroup>

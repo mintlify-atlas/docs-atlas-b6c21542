@@ -1,0 +1,370 @@
+---
+title: Managing Your Account
+description: Learn how to manage your account, contact requests, and property appraisals on Inmobiliaria Web
+---
+
+# Managing Your Account
+
+This guide covers account management, submitting contact requests, and requesting property appraisals through the Inmobiliaria Web platform.
+
+## Contact and Appraisal System
+
+The platform provides a comprehensive form for users to contact the real estate agency for general inquiries or property valuations.
+
+### Accessing the Contact Form
+
+Navigate to the contact page by:
+- Clicking "Quiero Vender" in the main navigation
+- Or visiting the "Contacto y Tasación" page directly
+
+<Steps>
+  <Step title="Select Contact Reason">
+    Choose between:
+    - **Contacto General** - General inquiries
+    - **Venta / Tasación** - Property sale or appraisal
+  </Step>
+  
+  <Step title="Fill Personal Information">
+    Provide your contact details so the agency can reach you.
+  </Step>
+  
+  <Step title="Add Property Details (if applicable)">
+    If requesting appraisal, provide information about your property.
+  </Step>
+  
+  <Step title="Submit Your Request">
+    Review and submit your contact form.
+  </Step>
+</Steps>
+
+## Contact Form Fields
+
+### Personal Information (Required for All Requests)
+
+<ParamField path="name" type="string" required>
+  **Full Name** - Your complete name
+  
+  Used for personalized communication and record-keeping.
+</ParamField>
+
+<ParamField path="email" type="string" required>
+  **Email Address** - Valid email address
+  
+  Primary contact method. Must be a valid email format (example@domain.com).
+</ParamField>
+
+<ParamField path="phone" type="string" required>
+  **Phone Number** - Your contact phone
+  
+  For direct communication and scheduling appointments.
+</ParamField>
+
+<ParamField path="availableHours" type="string" required>
+  **Available Hours** - When you can be contacted
+  
+  Example: "Lun-Vie 9-18hs" or "Tardes después de las 15hs"
+  
+  Helps schedule calls at convenient times.
+</ParamField>
+
+<Note>
+  If you're logged in, your email will be automatically pre-filled from your account information.
+</Note>
+
+## General Contact Request
+
+For general inquiries, questions about services, or other non-property-specific requests:
+
+### Required Information
+
+1. **Contact Reason**: Select "Contacto General"
+2. **Personal Information**: Name, email, phone, available hours
+3. **Message**: Describe your inquiry
+
+### Message Field
+
+<ParamField path="description" type="string" required>
+  **Your Message** - Detailed description of your inquiry
+  
+  Be specific about:
+  - What information you need
+  - Any specific questions
+  - Timeline or urgency
+  - Preferred communication method
+</ParamField>
+
+<Tip>
+  The more detailed your message, the better the agency can prepare for your inquiry and respond with relevant information.
+</Tip>
+
+## Property Appraisal Request
+
+Request a professional valuation for your property if you're considering selling or renting.
+
+### When to Request an Appraisal
+
+- You're thinking about selling your property
+- You want to know the current market value
+- You're considering renting out your property
+- You need a professional valuation for financial planning
+
+### Appraisal Form Fields
+
+<ParamField path="contactReason" type="select" required>
+  **Contact Reason** - Select "Venta / Tasación"
+  
+  This unlocks additional property-specific fields.
+</ParamField>
+
+<ParamField path="operationType" type="select" required>
+  **Operation Type** - What you want to do with the property
+  
+  Options:
+  - **Venta** - Selling the property
+  - **Alquiler** - Renting the property
+  - **Valuación** - Just need a valuation
+</ParamField>
+
+<ParamField path="propertyType" type="select" required>
+  **Property Type** - Type of property you own
+  
+  Choose from: Casa, Departamento, PH, Terreno, Local, Galpón, Oficina, Campo, Depósito, Bodega, Consultorio, Fondo de comercio, Hotel, Cochera
+  
+  Select the option that best matches your property.
+</ParamField>
+
+<ParamField path="location" type="string" required>
+  **Location** - Where your property is located
+  
+  Be as specific as possible:
+  - Street address
+  - Neighborhood
+  - City and province
+  - Nearby landmarks
+  
+  Example: "Av. San Martín 1234, Centro, Rosario, Santa Fe"
+</ParamField>
+
+<ParamField path="description" type="string" required>
+  **Property Description** - Detailed information about your property
+  
+  Include:
+  - Size (covered area, lot size)
+  - Number of bedrooms and bathrooms
+  - Age and condition
+  - Special features or recent improvements
+  - Any issues or needed repairs
+  - Reason for selling/renting
+  
+  Example: "Casa de 3 dormitorios, 2 baños, 120m² cubiertos, construida en 2010. Cocina recientemente renovada, jardín amplio, garage para 2 autos. Excelente estado general."
+</ParamField>
+
+<Warning>
+  All fields marked with * are required. The form will not submit until all required information is provided.
+</Warning>
+
+## Submitting Your Request
+
+### Form Validation
+
+Before submission, the system validates:
+
+- All required fields are completed
+- Email format is valid
+- Property fields are filled (for appraisal requests)
+- Description is not empty
+
+If validation fails:
+- Red borders appear around incomplete fields
+- Error messages show below each field
+- Fix errors and resubmit
+
+### Submission Process
+
+<Steps>
+  <Step title="Review Your Information">
+    Double-check all entered information for accuracy.
+  </Step>
+  
+  <Step title="Click Submit">
+    Click "Enviar Solicitud" (for appraisals) or "Enviar Mensaje" (for general contact).
+  </Step>
+  
+  <Step title="Wait for Confirmation">
+    A loading spinner appears while your request is being processed.
+  </Step>
+  
+  <Step title="Success!">
+    You'll see a success screen confirming your request was received.
+  </Step>
+</Steps>
+
+### After Submission
+
+Upon successful submission:
+
+- Green confirmation screen appears
+- Message: "¡Solicitud enviada!"
+- Confirmation: "Gracias por contactarnos. Nos pondremos en contacto a la brevedad."
+- Option to return to homepage
+
+<Note>
+  The agency will review your request and contact you during your available hours. Response time is typically 24-48 hours.
+</Note>
+
+## What Happens Next
+
+### For General Contact
+
+1. Agency receives your message
+2. Staff reviews your inquiry
+3. You receive a response via email or phone
+4. Further communication continues based on your needs
+
+### For Appraisal Requests
+
+1. Agency receives your property details
+2. An agent reviews the information
+3. Agent contacts you to schedule an in-person visit
+4. Professional appraisal is conducted
+5. You receive a detailed valuation report
+6. Agent discusses next steps (listing, pricing strategy, etc.)
+
+## Form Features
+
+### Auto-fill for Logged-in Users
+
+If you have an account and are logged in:
+- Email field is automatically populated
+- Saves time on repeat contacts
+- Ensures consistent contact information
+
+### Dynamic Form Sections
+
+The form adapts based on your selection:
+
+- **Contacto General**: Shows only basic fields
+- **Venta / Tasación**: Reveals additional property-specific fields
+
+This keeps the form simple and relevant to your needs.
+
+### Field Requirements
+
+Required fields are marked with an asterisk (*):
+
+**Always Required:**
+- Name
+- Email
+- Phone
+- Available Hours
+- Description/Message
+
+**Required for Appraisals:**
+- Operation Type
+- Property Type
+- Location
+
+### Cancel Option
+
+Not ready to submit? Click "Cancelar" to:
+- Return to the homepage
+- Discard entered information
+- Start fresh later
+
+<Warning>
+  Clicking "Cancelar" will discard all entered information without saving. Make sure to complete the form if you want to submit a request.
+</Warning>
+
+## Tips for Better Responses
+
+<AccordionGroup>
+  <Accordion title="Be Specific in Your Description">
+    The more details you provide:
+    - Better initial assessment
+    - More accurate preliminary valuation
+    - Faster response time
+    - More productive first conversation
+    
+    Don't hold back on details about your property's features, condition, or location.
+  </Accordion>
+  
+  <Accordion title="Provide Realistic Available Hours">
+    Consider:
+    - Your actual availability
+    - Time zones if relevant
+    - Preferred contact method (call vs. email)
+    - Best days of the week
+    
+    Example: "Lunes a Viernes 14-18hs, preferible WhatsApp"
+  </Accordion>
+  
+  <Accordion title="Use a Valid Email Address">
+    Ensure your email:
+    - Is actively monitored
+    - Has space for attachments (appraisal reports)
+    - Allows emails from the domain
+    - Is checked regularly
+  </Accordion>
+  
+  <Accordion title="Include Recent Improvements">
+    Mention:
+    - Recent renovations
+    - New appliances or systems
+    - Structural improvements
+    - Energy efficiency upgrades
+    
+    These can significantly affect your property's valuation.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<Accordion title="Form Won't Submit">
+  Check:
+  - All required fields have values
+  - Email is in valid format (user@domain.com)
+  - No error messages are showing
+  - Internet connection is stable
+  - Try refreshing the page and resubmitting
+</Accordion>
+
+<Accordion title="Not Receiving Response">
+  Verify:
+  - Email address is correct
+  - Check spam/junk folder
+  - Phone number includes country/area code
+  - Available hours allow enough time for contact
+  - Wait at least 48 hours before following up
+</Accordion>
+
+<Accordion title="Need to Update Submitted Information">
+  Solutions:
+  - Submit a new request with corrected information
+  - Reference your previous submission in the description
+  - Call the agency directly to update details
+  - Wait for agency contact and provide updates then
+</Accordion>
+
+## Privacy and Data Usage
+
+Your information is:
+- Stored securely in the agency's database
+- Used only for responding to your request
+- Not shared with third parties
+- Protected according to privacy regulations
+
+<Note>
+  By submitting the form, you consent to the agency contacting you regarding your request. You can request removal of your data at any time.
+</Note>
+
+## Mobile Experience
+
+The contact form is fully responsive:
+
+- All fields work on mobile devices
+- Touch-friendly form inputs
+- Optimized layout for small screens
+- Submit button always accessible
+- Success screen fits mobile viewport
+
+The form provides the same functionality on all devices for convenient access anywhere.

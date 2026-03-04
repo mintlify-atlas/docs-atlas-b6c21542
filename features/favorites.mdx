@@ -1,0 +1,545 @@
+---
+title: Favorites
+description: Save and manage favorite properties with real-time updates, persistent storage, and seamless authentication integration
+---
+
+The favorites feature allows authenticated users to save properties they're interested in and manage them in a dedicated favorites page.
+
+## Overview
+
+Favorites functionality includes:
+
+- Add/remove properties from favorites
+- Persistent favorites storage per user
+- Real-time UI updates
+- Dedicated favorites page
+- Authentication-gated access
+- Status-prioritized display
+- Bulk removal options
+
+## Favorites Page
+
+The favorites page displays all saved properties for the logged-in user.
+
+**Location**: `src/pages/FavoritesPage.tsx`
+
+### Page Structure
+
+```tsx FavoritesPage Component
+import { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import PropertyCard from "../components/PropertyCard";
+import { api } from "../lib/api";
+
+const FavoritesPage = () => {
+  const { user, removeFromFavorites } = useAuth();
+  const [favoriteProperties, setFavoriteProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [removingProperty, setRemovingProperty] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await api.users.getFavorites();
+        const favoriteIds = response.data || [];
+
+        // Fetch full property data if needed
+        if (Array.isArray(favoriteIds) && favoriteIds.length > 0) {
+          const firstItem = favoriteIds[0];
+          
+          if (typeof firstItem === "string" || typeof firstItem === "number") {
+            // Got IDs, fetch full property data
+            const propertyPromises = favoriteIds.map((id) =>
+              api.properties.get(String(id)).catch(() => null)
+            );
+            
+            const responses = await Promise.all(propertyPromises);
+            const properties = responses
+              .filter((response) => response !== null)
+              .map((response) => response.data);
+
+            // Sort to prioritize active properties
+            const sorted = sortPropertiesByStatusPriority(properties);
+            setFavoriteProperties(sorted);
+          } else {
+            // Got full property objects
+            const sorted = sortPropertiesByStatusPriority(favoriteIds);
+            setFavoriteProperties(sorted);
+          }
+        }
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Error al cargar favoritos"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFavorites();
+  }, [user]);
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Favorites grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {favoriteProperties.map((property) => (
+          <PropertyCard key={property.id} property={property} />
+        ))}
+      </div>
+    </div>
+  );
+};
+```
+
+## Adding Favorites
+
+Users can add properties to favorites from property cards or detail pages.
+
+<Steps>
+
+<Step title="Check Authentication">
+Verify user is logged in before allowing favorites.
+
+```tsx Authentication Check
+const handleFavoriteClick = async (e: React.MouseEvent) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  // Require authentication
+  if (!user) {
+    setShowLoginModal(true);
+    return;
+  }
+
+  // Continue with favorite logic
+};
+```
+</Step>
+
+<Step title="Add to Favorites">
+Call the `addToFavorites` method from AuthContext.
+
+```tsx Add Favorite
+try {
+  setIsFavoriting(true);
+  await addToFavorites(property.id);
+} catch (error) {
+  // Handle error
+} finally {
+  setIsFavoriting(false);
+}
+```
+</Step>
+
+<Step title="Update UI">
+The UI updates immediately with optimistic updates.
+
+```tsx
+// AuthContext implementation
+const addToFavorites = async (propertyId: string) => {
+  try {
+    await api.properties.addToFavorites(propertyId);
+    
+    // Update local state immediately
+    setAuthState((prev) => ({
+      ...prev,
+      favoritePropertyIds: [...prev.favoritePropertyIds, propertyId],
+    }));
+  } catch {
+    // Handle error silently for better UX
+  }
+};
+```
+</Step>
+
+</Steps>
+
+## Removing Favorites
+
+Users can remove properties from their favorites list.
+
+```tsx Remove from Favorites
+const handleRemoveFromFavorites = async (propertyId: string) => {
+  try {
+    setRemovingProperty(propertyId);
+    await removeFromFavorites(propertyId);
+    
+    // Remove from local state
+    setFavoriteProperties((prev) => 
+      prev.filter((p) => p.id !== propertyId)
+    );
+  } catch {
+    // Handle error silently
+  } finally {
+    setRemovingProperty(null);
+  }
+};
+
+// Remove button
+<button
+  onClick={() => handleRemoveFromFavorites(property.id)}
+  disabled={removingProperty === property.id}
+  className="absolute top-2 right-2 p-2 rounded-full"
+>
+  {removingProperty === property.id ? (
+    <Loader2 className="h-4 w-4 animate-spin" />
+  ) : (
+    <Trash2 className="h-4 w-4" />
+  )}
+</button>
+```
+
+## Favorite Button Component
+
+The favorite button appears on property cards and detail pages.
+
+```tsx Favorite Button
+const FavoriteButton = ({ propertyId }: { propertyId: string }) => {
+  const { user, addToFavorites, removeFromFavorites, isFavorite } = useAuth();
+  const [isFavoriting, setIsFavoriting] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  const handleClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    try {
+      setIsFavoriting(true);
+      if (isFavorite(propertyId)) {
+        await removeFromFavorites(propertyId);
+      } else {
+        await addToFavorites(propertyId);
+      }
+    } finally {
+      setIsFavoriting(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={handleClick}
+        disabled={isFavoriting}
+        className={`p-2 rounded-full transition-all ${
+          isFavorite(propertyId)
+            ? "bg-red-800 text-white"
+            : "bg-white text-gray-600"
+        }`}
+        aria-label={
+          isFavorite(propertyId)
+            ? "Remover de favoritos"
+            : "Guardar en favoritos"
+        }
+      >
+        <Heart
+          className={`h-4 w-4 ${
+            isFavorite(propertyId) ? "fill-current" : ""
+          }`}
+        />
+      </button>
+
+      {/* Login modal if not authenticated */}
+      {showLoginModal && (
+        <LoginModal onClose={() => setShowLoginModal(false)} />
+      )}
+    </>
+  );
+};
+```
+
+## API Integration
+
+### Favorites Endpoints
+
+<CodeGroup>
+
+```typescript Get Favorites
+// GET /users/favorites
+// Returns array of favorite property IDs or full property objects
+
+users: {
+  getFavorites: () => apiCall("/users/favorites"),
+}
+
+// Example response:
+{
+  "data": [
+    { "id": "123", "title": "Casa en Palermo", ... },
+    { "id": "456", "title": "Departamento Centro", ... }
+  ]
+}
+```
+
+```typescript Add to Favorites
+// POST /properties/:id/favorite
+// Adds property to user's favorites
+
+properties: {
+  addToFavorites: (id: string) =>
+    apiCall(`/properties/${id}/favorite`, {
+      method: "POST",
+    }),
+}
+
+// Example response:
+{
+  "success": true,
+  "message": "Property added to favorites"
+}
+```
+
+```typescript Remove from Favorites
+// DELETE /properties/:id/favorite
+// Removes property from user's favorites
+
+properties: {
+  removeFromFavorites: (id: string) =>
+    apiCall(`/properties/${id}/favorite`, {
+      method: "DELETE",
+    }),
+}
+
+// Example response:
+{
+  "success": true,
+  "message": "Property removed from favorites"
+}
+```
+
+</CodeGroup>
+
+## Database Schema
+
+Favorites are stored in the `user_favorites` table.
+
+```sql user_favorites Table
+CREATE TABLE user_favorites (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    property_id INTEGER REFERENCES properties(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, property_id)
+);
+
+-- Indexes for performance
+CREATE INDEX idx_favorites_user ON user_favorites(user_id);
+CREATE INDEX idx_favorites_property ON user_favorites(property_id);
+```
+
+<Note>
+  The `UNIQUE` constraint ensures a user cannot favorite the same property twice.
+</Note>
+
+## State Management
+
+Favorites state is managed in the AuthContext for global access.
+
+```typescript Favorites State
+interface AuthState {
+  user: User | null;
+  favoritePropertyIds: string[];
+  // ... other fields
+}
+
+// Check if property is favorited
+const isFavorite = (propertyId: string): boolean => {
+  return authState.favoritePropertyIds.includes(propertyId);
+};
+
+// Add to favorites (optimistic update)
+const addToFavorites = async (propertyId: string) => {
+  try {
+    await api.properties.addToFavorites(propertyId);
+    setAuthState((prev) => ({
+      ...prev,
+      favoritePropertyIds: [...prev.favoritePropertyIds, propertyId],
+    }));
+  } catch {
+    // Revert optimistic update on error
+  }
+};
+
+// Remove from favorites (optimistic update)
+const removeFromFavorites = async (propertyId: string) => {
+  try {
+    await api.properties.removeFromFavorites(propertyId);
+    setAuthState((prev) => ({
+      ...prev,
+      favoritePropertyIds: prev.favoritePropertyIds.filter(
+        (id) => id !== propertyId
+      ),
+    }));
+  } catch {
+    // Revert optimistic update on error
+  }
+};
+```
+
+## Empty States
+
+Provide helpful messages when users have no favorites.
+
+<Tabs>
+  <Tab title="Not Authenticated">
+    ```tsx
+    if (!user) {
+      return (
+        <div className="text-center py-16">
+          <Heart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-xl font-medium text-gray-900 mb-2">
+            Inicia sesión para ver tus favoritos
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Necesitas estar autenticado para guardar y ver propiedades favoritas.
+          </p>
+          <Link
+            to="/auth"
+            className="px-4 py-2 bg-red-600 text-white rounded-lg"
+          >
+            Iniciar Sesión
+          </Link>
+        </div>
+      );
+    }
+    ```
+  </Tab>
+  
+  <Tab title="No Favorites">
+    ```tsx
+    if (favoriteProperties.length === 0) {
+      return (
+        <div className="text-center py-16">
+          <Heart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-medium text-gray-900 mb-2">
+            No tienes propiedades favoritas
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Explora nuestras propiedades y guarda las que más te gusten
+          </p>
+          <Link
+            to="/propiedades"
+            className="px-4 py-2 bg-red-600 text-white rounded-lg"
+          >
+            Ver Propiedades
+          </Link>
+        </div>
+      );
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Error State">
+    ```tsx
+    if (error) {
+      return (
+        <div className="text-center py-16">
+          <Heart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-medium text-gray-900 mb-2">
+            Error al cargar favoritos
+          </h3>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg"
+          >
+            Reintentar
+          </button>
+        </div>
+      );
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Loading States
+
+Show loading indicators while fetching favorites.
+
+```tsx Loading State
+if (loading) {
+  return (
+    <div className="text-center py-16">
+      <Loader2 className="h-16 w-16 text-gray-400 mx-auto mb-4 animate-spin" />
+      <h3 className="text-xl font-medium text-gray-900 mb-2">
+        Cargando favoritos...
+      </h3>
+    </div>
+  );
+}
+```
+
+## Property Status Sorting
+
+Favorites are sorted to show active properties first.
+
+```typescript Status Priority
+import { sortPropertiesByStatusPriority } from "../utils";
+
+// Sort favorites to prioritize active properties
+const sortedProperties = sortPropertiesByStatusPriority(favoriteProperties);
+setFavoriteProperties(sortedProperties);
+
+// Priority order:
+// 1. activo (active)
+// 2. pendiente (pending)
+// 3. pausado (paused)
+// 4. reservado (reserved)
+// 5. alquilado (rented)
+// 6. vendido (sold)
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Performance">
+    - Use optimistic updates for immediate feedback
+    - Cache favorite IDs in memory
+    - Batch favorite operations when possible
+    - Implement pagination for large favorite lists
+  </Accordion>
+
+  <Accordion title="User Experience">
+    - Show loading states during operations
+    - Provide visual feedback on favorite status
+    - Handle authentication gracefully
+    - Confirm bulk removal actions
+  </Accordion>
+
+  <Accordion title="Error Handling">
+    - Handle API failures silently for favorites
+    - Revert optimistic updates on error
+    - Provide retry mechanisms
+    - Log errors for debugging
+  </Accordion>
+
+  <Accordion title="Accessibility">
+    - Add ARIA labels to favorite buttons
+    - Support keyboard navigation
+    - Announce status changes to screen readers
+    - Ensure sufficient color contrast
+  </Accordion>
+</AccordionGroup>
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="User Authentication" icon="user" href="/features/user-authentication">
+    Required for saving and viewing favorites
+  </Card>
+  <Card title="Property Listings" icon="list" href="/features/property-listings">
+    Browse properties to add to favorites
+  </Card>
+</CardGroup>

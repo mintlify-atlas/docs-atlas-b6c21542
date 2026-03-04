@@ -1,0 +1,436 @@
+---
+title: Configuration
+description: Environment variables and configuration options for the Inmobiliaria Web application
+---
+
+## Environment Variables
+
+The Inmobiliaria Web application uses Vite's environment variable system. All client-side environment variables must be prefixed with `VITE_`.
+
+### API Configuration
+
+<Warning>
+  Environment variables prefixed with `VITE_` are exposed to the client-side code. Never store secrets or sensitive data in `VITE_` prefixed variables.
+</Warning>
+
+#### VITE_API_URL
+
+The base URL for the backend API.
+
+<CodeGroup>
+
+```bash Development
+VITE_API_URL=http://localhost:10000/api
+```
+
+```bash Production
+VITE_API_URL=https://api.yourdomain.com/api
+```
+
+</CodeGroup>
+
+**Default behavior** (from `src/lib/api.ts:7-17`):
+
+```typescript
+const getApiBase = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  if (import.meta.env.PROD) {
+    return "http://localhost:10000/api";
+  }
+
+  return "http://localhost:10000/api";
+};
+```
+
+- If `VITE_API_URL` is set, it will be used
+- Otherwise, defaults to `http://localhost:10000/api` in both development and production
+
+### Creating Environment Files
+
+Create a `.env` file in the project root:
+
+<Steps>
+  <Step title="Create .env file">
+    ```bash
+    touch .env
+    ```
+  </Step>
+
+  <Step title="Add variables">
+    ```bash
+    # API Configuration
+    VITE_API_URL=http://localhost:10000/api
+    ```
+  </Step>
+
+  <Step title="Restart dev server">
+    Environment variable changes require restarting the Vite dev server:
+    
+    ```bash
+    npm run dev
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  Add `.env` to your `.gitignore` to prevent committing sensitive configuration.
+</Note>
+
+### Environment-Specific Files
+
+Vite supports environment-specific files:
+
+- `.env` - Loaded in all environments
+- `.env.local` - Loaded in all environments, ignored by git
+- `.env.development` - Development only
+- `.env.production` - Production only
+
+**Priority** (highest to lowest):
+1. `.env.[mode].local`
+2. `.env.[mode]`
+3. `.env.local`
+4. `.env`
+
+## Vite Configuration
+
+The Vite build tool is configured in `vite.config.ts`.
+
+### Current Configuration
+
+```typescript
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
+
+export default defineConfig({
+  plugins: [
+    tanstackRouter({
+      target: "react",
+      autoCodeSplitting: true,
+    }),
+    react(),
+  ],
+});
+```
+
+### Plugins
+
+<Accordion title="@tanstack/router-plugin">
+  Automatically generates type-safe route definitions.
+  
+  **Options:**
+  - `target: "react"` - Generates React-specific route types
+  - `autoCodeSplitting: true` - Automatically splits routes into separate chunks for optimal loading
+  
+  This plugin watches your route files and generates `routeTree.gen.ts` with fully typed route definitions.
+</Accordion>
+
+<Accordion title="@vitejs/plugin-react">
+  Provides React Fast Refresh (HMR) support.
+  
+  Features:
+  - Hot Module Replacement for instant updates
+  - Preserves component state during development
+  - Automatic JSX transformation
+</Accordion>
+
+### Common Configuration Options
+
+You can extend `vite.config.ts` with additional options:
+
+<CodeGroup>
+
+```typescript Custom Port
+export default defineConfig({
+  server: {
+    port: 3000,
+  },
+  // ... plugins
+});
+```
+
+```typescript Proxy API Requests
+export default defineConfig({
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:10000',
+        changeOrigin: true,
+      },
+    },
+  },
+  // ... plugins
+});
+```
+
+```typescript Path Aliases
+import path from 'path';
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@components': path.resolve(__dirname, './src/components'),
+    },
+  },
+  // ... plugins
+});
+```
+
+```typescript Build Options
+export default defineConfig({
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    minify: 'terser',
+  },
+  // ... plugins
+});
+```
+
+</CodeGroup>
+
+## TypeScript Configuration
+
+The project uses TypeScript 5.8.3 with strict type checking.
+
+### Main Configuration (tsconfig.json)
+
+```json
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}
+```
+
+This is a project references configuration that splits TypeScript into two contexts:
+- `tsconfig.app.json` - Application source code
+- `tsconfig.node.json` - Build tooling (Vite config, etc.)
+
+### Application Config (tsconfig.app.json)
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    
+    // Strict type checking
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    
+    // React
+    "jsx": "react-jsx",
+    
+    // Build
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}
+```
+
+### Key TypeScript Settings
+
+<Accordion title="Strict Mode Enabled">
+  All strict type checking options are enabled:
+  - `strict: true` - Enables all strict checking options
+  - `noUnusedLocals: true` - Error on unused local variables
+  - `noUnusedParameters: true` - Error on unused function parameters
+  - `noFallthroughCasesInSwitch: true` - Prevent fallthrough in switch statements
+  - `noUncheckedSideEffectImports: true` - Ensure imports have type definitions
+</Accordion>
+
+<Accordion title="Modern JavaScript Target">
+  - `target: "ES2022"` - Compiles to ES2022 JavaScript
+  - `lib: ["ES2022", "DOM", "DOM.Iterable"]` - Includes modern browser APIs
+  - `module: "ESNext"` - Uses latest ECMAScript module syntax
+</Accordion>
+
+<Accordion title="Bundler Module Resolution">
+  - `moduleResolution: "bundler"` - Optimized for Vite bundler
+  - `allowImportingTsExtensions: true` - Can import `.ts` files directly
+  - `verbatimModuleSyntax: true` - Preserves import/export syntax
+</Accordion>
+
+<Accordion title="React JSX">
+  - `jsx: "react-jsx"` - Uses new JSX transform (no need to import React)
+  - Works with React 17+ automatic JSX runtime
+</Accordion>
+
+## Tailwind CSS Configuration
+
+The application uses Tailwind CSS 3.4.17 for styling.
+
+### Configuration (tailwind.config.js)
+
+```javascript
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#fffbeb',
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#fbbf24',
+          500: '#f59e0b',  // Main primary color
+          600: '#d97706',
+          700: '#b45309',
+          800: '#92400e',
+          900: '#78350f',
+          950: '#451a03',
+        },
+        secondary: {
+          50: '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#cbd5e1',
+          400: '#94a3b8',
+          500: '#64748b',  // Main secondary color
+          600: '#475569',
+          700: '#334155',
+          800: '#1e293b',
+          900: '#0f172a',
+          950: '#020617',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+}
+```
+
+### Custom Theme
+
+<Accordion title="Primary Color (Amber/Gold)">
+  Amber/gold color palette used for primary actions and highlights.
+  
+  ```html
+  <button class="bg-primary-500 hover:bg-primary-600">
+    Primary Button
+  </button>
+  ```
+</Accordion>
+
+<Accordion title="Secondary Color (Slate)">
+  Slate gray palette for secondary elements and backgrounds.
+  
+  ```html
+  <div class="bg-secondary-100 text-secondary-700">
+    Secondary content
+  </div>
+  ```
+</Accordion>
+
+<Accordion title="Custom Font Family">
+  Uses Inter font as the default sans-serif font.
+  
+  ```html
+  <p class="font-sans">
+    Text in Inter font
+  </p>
+  ```
+  
+  <Note>
+    Make sure to include the Inter font in your HTML or use a CDN.
+  </Note>
+</Accordion>
+
+### Content Sources
+
+Tailwind scans these files for class usage:
+- `./index.html` - Main HTML file
+- `./src/**/*.{js,ts,jsx,tsx}` - All source files
+
+<Warning>
+  Only classes found in these files will be included in the final CSS bundle. Dynamic class names may not be included.
+</Warning>
+
+## PostCSS Configuration
+
+Tailwind requires PostCSS. Configuration is typically in `postcss.config.js`:
+
+```javascript
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+```
+
+## API Client Configuration
+
+The API client is configured in `src/lib/api.ts` and handles all backend communication.
+
+### Features
+
+<Accordion title="Automatic Credentials">
+  All requests include credentials for cookie-based authentication:
+  
+  ```typescript
+  const response = await fetch(url, {
+    credentials: "include",
+    // ...
+  });
+  ```
+</Accordion>
+
+<Accordion title="Automatic Content-Type">
+  Automatically sets `Content-Type: application/json` for non-FormData requests:
+  
+  ```typescript
+  const mergedHeaders: HeadersInit = {
+    ...(isFormDataBody ? {} : { "Content-Type": "application/json" }),
+    ...(options.headers || {}),
+  };
+  ```
+</Accordion>
+
+<Accordion title="Error Handling">
+  Parses JSON error responses and throws user-friendly errors:
+  
+  ```typescript
+  if (!response.ok) {
+    const errorText = await response.text();
+    let error = JSON.parse(errorText);
+    throw new Error(error.message || `HTTP ${response.status}`);
+  }
+  ```
+</Accordion>
+
+### Available API Methods
+
+See `src/lib/api.ts:62-188` for the complete API client with methods for:
+- **Properties**: `list()`, `get()`, `getBySlug()`, `create()`, `update()`, `delete()`, `addToFavorites()`, `removeFromFavorites()`
+- **Users**: `getProfile()`, `updateProfile()`, `getFavorites()`
+- **Admin**: `getStats()`, `getProperties()`, `getUsers()`, `updateUserRole()`, `updatePropertyStatus()`, `createAdmin()`
+- **Metadata**: `getAll()`, `getPropertyTypes()`, `getPropertySubtypes()`, `getOperationTypes()`, etc.
+- **Contact**: `submitAppraisal()`
+
+## Next Steps
+
+- Review [Environment Setup](/development/environment-setup) for installation
+- Explore [Database Schema](/development/database-schema) to understand data models
+- Check [API Reference](/api/overview) for endpoint documentation
+- Learn about [Authentication](/features/user-authentication) configuration

@@ -1,0 +1,544 @@
+---
+title: Deployment
+description: Complete guide to building and deploying the Inmobiliaria Web application to production
+---
+
+## Overview
+
+The Inmobiliaria Web frontend is a static single-page application (SPA) built with Vite and React. It's deployed using Caddy as a web server and can be hosted on platforms like Railway that support nixpacks.
+
+## Build Process
+
+### Development Build
+
+Run the development server locally:
+
+```bash
+npm run dev
+```
+
+This starts the Vite development server with hot module replacement (HMR) on `http://localhost:5173`.
+
+### Production Build
+
+<Steps>
+  <Step title="Install Dependencies">
+    Install all required packages:
+
+    ```bash
+    npm install
+    ```
+  </Step>
+
+  <Step title="Run TypeScript Check">
+    Verify type safety before building:
+
+    ```bash
+    npm run build
+    ```
+
+    This runs `tsc -b && vite build` which:
+    - Compiles TypeScript to check for type errors
+    - Builds the production bundle
+  </Step>
+
+  <Step title="Verify Build Output">
+    The build creates a `dist/` directory with optimized static files:
+
+    ```
+    dist/
+    ├── index.html
+    ├── assets/
+    │   ├── index-[hash].js
+    │   ├── index-[hash].css
+    │   └── [images and fonts]
+    └── ...
+    ```
+  </Step>
+</Steps>
+
+### Build Configuration
+
+The build is configured in `package.json`:
+
+```json package.json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  }
+}
+```
+
+<Note>
+  The `build` script runs TypeScript compiler (`tsc -b`) before Vite build to ensure type safety. If TypeScript errors are found, the build will fail.
+</Note>
+
+## Environment Variables
+
+### Required Variables
+
+Set these environment variables for production:
+
+```bash .env.production
+# Backend API URL
+VITE_API_URL=https://api.yourdomain.com/api
+
+# Google Maps API Key
+VITE_GOOGLE_MAPS_API_KEY=your_production_api_key
+```
+
+<Warning>
+  All environment variables must be prefixed with `VITE_` to be accessible in the frontend application. Variables without this prefix will not be included in the build.
+</Warning>
+
+### API URL Configuration
+
+The API URL is configured in `src/lib/api.ts`:
+
+```typescript src/lib/api.ts
+const getApiBase = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  if (import.meta.env.PROD) {
+    return "http://localhost:10000/api";
+  }
+
+  return "http://localhost:10000/api";
+};
+
+export const API_BASE = getApiBase();
+export const API_ORIGIN = API_BASE.startsWith("http")
+  ? API_BASE.replace(/\/api\/?$/, "")
+  : window.location.origin;
+```
+
+## Caddy Web Server
+
+### Caddyfile Configuration
+
+The application uses Caddy for serving static files and handling routing:
+
+```caddyfile Caddyfile
+{
+    admin off
+    persist_config off
+    auto_https off
+    log {
+        format json
+    }
+    servers {
+        trusted_proxies static private_ranges 100.0.0.0/8
+    }
+}
+
+# Redirect www to non-www
+www.ramirezinmuebles.com:{$PORT:3000} {
+    redir https://ramirezinmuebles.com{uri}
+}
+
+# Main site (canonical: no www)
+ramirezinmuebles.com:{$PORT:3000} {
+
+    log {
+        format json
+    }
+
+    rewrite /health /*
+
+    root * /app/dist
+
+    encode gzip
+
+    file_server
+
+    try_files {path} /index.html
+}
+```
+
+### Key Directives
+
+| Directive | Purpose |
+|-----------|----------|
+| `admin off` | Disables Caddy admin API |
+| `auto_https off` | Disables automatic HTTPS (handled by proxy) |
+| `trusted_proxies` | Configures proxy trust for Railway/cloud platforms |
+| `redir` | Redirects www to non-www domain |
+| `root * /app/dist` | Serves files from the dist directory |
+| `encode gzip` | Enables gzip compression |
+| `try_files {path} /index.html` | SPA routing fallback |
+
+<Note>
+  The `try_files {path} /index.html` directive is crucial for SPA routing. It ensures all routes are handled by React Router instead of returning 404 errors.
+</Note>
+
+### Health Check Endpoint
+
+```caddyfile
+rewrite /health /*
+```
+
+This rewrites `/health` requests to serve the index page, useful for platform health checks.
+
+## Nixpacks Configuration
+
+### nixpacks.toml
+
+For platforms like Railway that use nixpacks:
+
+```toml nixpacks.toml
+[phases.setup]
+nixPath = ["caddy"]
+
+[phases.start]
+cmd = "caddy run --config Caddyfile --adapter caddyfile"
+```
+
+### Configuration Breakdown
+
+- **phases.setup**: Installs Caddy from nixpkgs
+- **phases.start**: Runs Caddy with the Caddyfile configuration
+
+<Note>
+  Nixpacks automatically detects the Node.js environment and runs `npm install && npm run build` before the start phase.
+</Note>
+
+## Deployment Platforms
+
+### Railway Deployment
+
+<Steps>
+  <Step title="Connect Repository">
+    1. Go to [Railway](https://railway.app)
+    2. Create new project
+    3. Connect your GitHub repository
+  </Step>
+
+  <Step title="Configure Environment">
+    Add environment variables in Railway dashboard:
+
+    ```bash
+    VITE_API_URL=https://your-backend.railway.app/api
+    VITE_GOOGLE_MAPS_API_KEY=your_api_key
+    PORT=3000
+    ```
+  </Step>
+
+  <Step title="Deploy">
+    Railway automatically:
+    1. Detects nixpacks.toml
+    2. Installs dependencies
+    3. Runs build command
+    4. Starts Caddy server
+  </Step>
+
+  <Step title="Configure Domain">
+    Add custom domain in Railway settings:
+    - ramirezinmuebles.com → main service
+    - www.ramirezinmuebles.com → redirects to non-www
+  </Step>
+</Steps>
+
+### Manual Deployment
+
+For traditional hosting:
+
+<Steps>
+  <Step title="Build Locally">
+    ```bash
+    npm install
+    npm run build
+    ```
+  </Step>
+
+  <Step title="Upload Files">
+    Upload the `dist/` directory to your web server:
+
+    ```bash
+    scp -r dist/* user@server:/var/www/html/
+    ```
+  </Step>
+
+  <Step title="Configure Web Server">
+    Configure your web server (Nginx, Apache, etc.) to:
+    - Serve files from the upload directory
+    - Redirect all routes to `index.html`
+    - Enable gzip compression
+    - Set appropriate cache headers
+  </Step>
+</Steps>
+
+### Docker Deployment
+
+Create a `Dockerfile`:
+
+```dockerfile Dockerfile
+# Build stage
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Production stage
+FROM caddy:2-alpine
+COPY --from=builder /app/dist /app/dist
+COPY Caddyfile /etc/caddy/Caddyfile
+EXPOSE 3000
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+```
+
+Build and run:
+
+```bash
+docker build -t inmobiliaria-web .
+docker run -p 3000:3000 \
+  -e VITE_API_URL=https://api.example.com/api \
+  -e VITE_GOOGLE_MAPS_API_KEY=your_key \
+  inmobiliaria-web
+```
+
+## Nginx Configuration
+
+Alternative to Caddy using Nginx:
+
+```nginx nginx.conf
+server {
+    listen 80;
+    server_name ramirezinmuebles.com;
+    root /var/www/html;
+    index index.html;
+
+    # Gzip compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+    # SPA routing
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+}
+
+# Redirect www to non-www
+server {
+    listen 80;
+    server_name www.ramirezinmuebles.com;
+    return 301 https://ramirezinmuebles.com$request_uri;
+}
+```
+
+## Performance Optimization
+
+### Vite Build Optimization
+
+Configure in `vite.config.ts`:
+
+```typescript vite.config.ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'router': ['@tanstack/react-router'],
+          'maps': ['@googlemaps/js-api-loader', 'leaflet'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
+});
+```
+
+### Compression
+
+Caddy automatically handles gzip compression. For additional optimization:
+
+```caddyfile
+encode zstd gzip
+```
+
+### Cache Headers
+
+Add cache headers in Caddyfile:
+
+```caddyfile
+header /assets/* Cache-Control "public, max-age=31536000, immutable"
+header / Cache-Control "public, max-age=0, must-revalidate"
+```
+
+## Monitoring and Logging
+
+### Structured Logging
+
+Caddy outputs JSON logs for easy parsing:
+
+```json
+{
+  "level": "info",
+  "ts": 1234567890,
+  "msg": "handled request",
+  "request": {
+    "method": "GET",
+    "uri": "/",
+    "proto": "HTTP/1.1"
+  },
+  "status": 200
+}
+```
+
+### Health Checks
+
+Implement health check monitoring:
+
+```bash
+curl https://ramirezinmuebles.com/health
+```
+
+### Error Tracking
+
+Integrate error tracking services:
+
+```typescript
+import * as Sentry from '@sentry/react';
+
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  environment: import.meta.env.MODE,
+});
+```
+
+## Troubleshooting
+
+### Build Failures
+
+**TypeScript Errors**:
+```bash
+# Fix type errors before building
+npm run lint
+tsc --noEmit
+```
+
+**Dependency Issues**:
+```bash
+# Clear cache and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Runtime Issues
+
+**API Connection Errors**:
+- Verify `VITE_API_URL` is set correctly
+- Check CORS configuration on backend
+- Ensure backend is accessible from frontend
+
+**404 Errors on Refresh**:
+- Verify `try_files` directive in Caddyfile
+- Ensure SPA fallback is configured
+
+**Environment Variables Not Working**:
+- Ensure variables have `VITE_` prefix
+- Rebuild after changing environment variables
+- Check variables are set in deployment platform
+
+## Security Checklist
+
+<Steps>
+  <Step title="Environment Variables">
+    - Never commit `.env` files
+    - Use platform secrets for sensitive data
+    - Rotate API keys regularly
+  </Step>
+
+  <Step title="CORS Configuration">
+    - Configure backend CORS to allow only your domain
+    - Don't use `*` wildcards in production
+  </Step>
+
+  <Step title="Headers">
+    - Set security headers (CSP, X-Frame-Options, etc.)
+    - Enable HTTPS only
+    - Configure HSTS
+  </Step>
+
+  <Step title="Dependencies">
+    - Run security audits: `npm audit`
+    - Keep dependencies updated
+    - Review package permissions
+  </Step>
+</Steps>
+
+## Best Practices
+
+<Note>
+  - Always run builds with environment variables set
+  - Test production builds locally with `npm run preview`
+  - Use CI/CD pipelines for automated deployments
+  - Monitor build sizes and performance metrics
+  - Implement proper error tracking and logging
+  - Set up automated backups
+  - Use staging environments for testing
+  - Document deployment procedures
+</Note>
+
+## CI/CD Pipeline Example
+
+```yaml .github/workflows/deploy.yml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+      
+      - name: Deploy to Railway
+        run: |
+          npm install -g @railway/cli
+          railway up
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+```

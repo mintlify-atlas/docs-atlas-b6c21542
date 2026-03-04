@@ -1,0 +1,343 @@
+---
+title: FilterSidebar
+description: An advanced filtering sidebar for property search with collapsible sections and metadata-driven options
+---
+
+## Overview
+
+The `FilterSidebar` component provides a comprehensive filtering interface for property searches. It fetches metadata from the API, displays collapsible filter sections, and manages filter state with real-time updates.
+
+## Import
+
+```tsx
+import FilterSidebar from "../components/FilterSidebar";
+```
+
+## Props
+
+<ParamField path="isOpen" type="boolean" required>
+  Controls the visibility of the sidebar on mobile devices. On desktop (lg breakpoint), the sidebar is always visible.
+</ParamField>
+
+<ParamField path="onClose" type="() => void" required>
+  Callback function triggered when the user closes the sidebar (mobile only).
+</ParamField>
+
+<ParamField path="searchFilters" type="PropertyFilters" required>
+  Current filter state object containing all active filters.
+</ParamField>
+
+<ParamField path="setSearchFilters" type="(filters: PropertyFilters) => void" required>
+  Function to update the filter state.
+</ParamField>
+
+## PropertyFilters Type
+
+The `PropertyFilters` interface includes:
+
+<ParamField path="propertyType" type="string[]">
+  Array of property type slugs (e.g., ["casa", "departamento"])
+</ParamField>
+
+<ParamField path="listingType" type="string[]">
+  Array of listing type slugs (e.g., ["venta", "alquiler"])
+</ParamField>
+
+<ParamField path="bedrooms" type="number">
+  Minimum number of bedrooms
+</ParamField>
+
+<ParamField path="bathrooms" type="number">
+  Minimum number of bathrooms
+</ParamField>
+
+<ParamField path="minPrice" type="number">
+  Minimum price filter
+</ParamField>
+
+<ParamField path="maxPrice" type="number">
+  Maximum price filter
+</ParamField>
+
+<ParamField path="query" type="string">
+  Search query string
+</ParamField>
+
+<ParamField path="location" type="string">
+  Location search string
+</ParamField>
+
+## Features
+
+### Metadata Integration
+
+The component automatically fetches filter options from the API on mount:
+- Property types (casa, departamento, terreno, local)
+- Operation types (venta, alquiler, venta-y-alquiler)
+- Fallback to hardcoded values if API fails
+
+### Collapsible Sections
+
+All filter sections can be expanded/collapsed:
+- Default expanded: Property Type, Listing Type, Price, Bedrooms, Bathrooms
+- Chevron icons indicate section state
+- Smooth transitions for expand/collapse
+
+### Filter Sections
+
+#### Property Type (Tipo de Propiedad)
+
+Checkbox list of available property types:
+- Casa (House)
+- Departamento (Apartment)
+- Terreno (Land)
+- Local (Commercial space)
+
+#### Listing Type (Tipo de Operación)
+
+Checkbox list of operation types:
+- Venta (Sale)
+- Alquiler (Rent)
+- Venta y Alquiler (Sale and Rent)
+
+#### Bedrooms (Dormitorios)
+
+Button group for minimum bedroom count:
+- Options: 1+, 2+, 3+, 4+, 5+
+- Click to select, click again to deselect
+- Red highlight for selected option
+
+#### Bathrooms (Baños)
+
+Button group for minimum bathroom count:
+- Options: 1+, 2+, 3+, 4+
+- Click to select, click again to deselect
+- Red highlight for selected option
+
+### Responsive Design
+
+<Tabs>
+  <Tab title="Mobile">
+    - Fixed overlay sidebar
+    - Slides in from left
+    - Dark overlay backdrop
+    - Close button in header
+    - Full height design
+  </Tab>
+  <Tab title="Desktop">
+    - Sticky positioned sidebar
+    - Always visible
+    - Max height with scroll
+    - No close button
+    - Border and rounded corners
+  </Tab>
+</Tabs>
+
+## Usage Examples
+
+<CodeGroup>
+```tsx Basic Implementation
+import FilterSidebar from "../components/FilterSidebar";
+import { useState } from "react";
+import type { PropertyFilters } from "../types/api";
+
+function PropertyListings() {
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<PropertyFilters>({
+    propertyType: [],
+    listingType: [],
+  });
+
+  return (
+    <div className="flex gap-6">
+      {/* Mobile filter toggle */}
+      <button
+        onClick={() => setIsFilterOpen(true)}
+        className="lg:hidden"
+      >
+        Show Filters
+      </button>
+
+      {/* Filter Sidebar */}
+      <FilterSidebar
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        searchFilters={filters}
+        setSearchFilters={setFilters}
+      />
+
+      {/* Property Grid */}
+      <div className="flex-1">
+        {/* Render properties based on filters */}
+      </div>
+    </div>
+  );
+}
+```
+
+```tsx With URL Sync
+import FilterSidebar from "../components/FilterSidebar";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import type { PropertyFilters } from "../types/api";
+
+function PropertySearch() {
+  const navigate = useNavigate();
+  const searchParams = useSearch();
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const handleFiltersChange = (newFilters: PropertyFilters) => {
+    // Update URL with new filters
+    navigate({
+      search: newFilters,
+      replace: true,
+    });
+  };
+
+  return (
+    <div className="container mx-auto">
+      <div className="flex gap-6">
+        <FilterSidebar
+          isOpen={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          searchFilters={searchParams}
+          setSearchFilters={handleFiltersChange}
+        />
+        <PropertyList filters={searchParams} />
+      </div>
+    </div>
+  );
+}
+```
+
+```tsx With Filter Count Badge
+import FilterSidebar from "../components/FilterSidebar";
+import { Filter } from "lucide-react";
+import type { PropertyFilters } from "../types/api";
+
+function FilterableSearch() {
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<PropertyFilters>({});
+
+  // Count active filters
+  const activeFilterCount = [
+    filters.propertyType?.length || 0,
+    filters.listingType?.length || 0,
+    filters.bedrooms ? 1 : 0,
+    filters.bathrooms ? 1 : 0,
+  ].reduce((a, b) => a + b, 0);
+
+  return (
+    <>
+      <button
+        onClick={() => setIsFilterOpen(true)}
+        className="lg:hidden relative"
+      >
+        <Filter className="h-5 w-5" />
+        {activeFilterCount > 0 && (
+          <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+            {activeFilterCount}
+          </span>
+        )}
+      </button>
+
+      <FilterSidebar
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        searchFilters={filters}
+        setSearchFilters={setFilters}
+      />
+    </>
+  );
+}
+```
+</CodeGroup>
+
+## Internal Components
+
+### FilterSection
+
+Internal component for collapsible filter sections:
+
+```tsx
+<FilterSection title="Tipo de Propiedad" section="propertyType">
+  {/* Filter options */}
+</FilterSection>
+```
+
+### CheckboxOption
+
+Internal component for checkbox filter items:
+
+```tsx
+<CheckboxOption
+  value="casa"
+  label="Casa"
+  checked={isChecked}
+  onChange={handleChange}
+/>
+```
+
+## Loading State
+
+While fetching metadata, displays:
+- Skeleton sidebar structure
+- Loading spinner (using `Loader2` icon)
+- Same header layout
+
+## Error Handling
+
+If metadata fetch fails:
+- Displays yellow warning banner
+- Falls back to basic filter options
+- App remains functional
+
+## Styling
+
+### Desktop Styles
+- Width: `w-80` (320px)
+- Position: `sticky` with `top-4`
+- Max height: `max-h-[calc(100vh-120px)]`
+- Border and rounded corners
+
+### Mobile Styles
+- Full height overlay
+- Slide-in animation from left
+- Dark backdrop (`bg-black bg-opacity-60`)
+- Z-index: `z-50` for sidebar, `z-40` for backdrop
+
+## Accessibility
+
+- All buttons have `aria-label` attributes
+- Keyboard navigation support with `tabIndex={0}`
+- Section toggles have descriptive labels
+- Semantic HTML structure
+- Focus states on all interactive elements
+
+## Dependencies
+
+- `lucide-react` - Icons (X, ChevronDown, ChevronUp, Loader2)
+- `react` - State management
+- `api` - Metadata fetching
+
+## API Integration
+
+Fetches metadata using:
+
+```tsx
+const response = await api.metadata.getAll();
+```
+
+Expected response structure:
+
+```tsx
+{
+  data: {
+    propertyTypes: Array<{ id: number; name: string; slug: string }>,
+    operationTypes: Array<{ id: number; name: string; slug: string }>
+  }
+}
+```
+
+## Source Code
+
+View the full implementation at `src/components/FilterSidebar.tsx:1`

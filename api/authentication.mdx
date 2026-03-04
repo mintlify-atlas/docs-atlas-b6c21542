@@ -1,0 +1,592 @@
+---
+title: Authentication
+description: Implementing Better Auth for email/password and OAuth authentication in Inmobiliaria Web
+---
+
+## Introduction
+
+Inmobiliaria Web uses [Better Auth](https://better-auth.com) for authentication, providing a secure, modern authentication system with support for:
+
+- Email and password authentication
+- Google OAuth integration
+- Session management with secure cookies
+- Password reset flows
+- Email verification
+- Admin role management
+
+## Authentication Client Setup
+
+The authentication client is initialized with the API origin URL and includes the admin plugin:
+
+<CodeGroup>
+```typescript src/lib/auth-client.ts
+import { createAuthClient } from "better-auth/react";
+import { adminClient } from "better-auth/client/plugins";
+import { API_ORIGIN } from "./api";
+
+export const authClient = createAuthClient({
+  baseURL: API_ORIGIN,
+  plugins: [adminClient()],
+});
+```
+</CodeGroup>
+
+<Note>
+The `API_ORIGIN` is automatically derived from `API_BASE` by removing the `/api` suffix. In production, this ensures authentication requests go to the correct domain.
+</Note>
+
+## Email & Password Authentication
+
+### Sign Up
+
+Create a new user account with email verification:
+
+<CodeGroup>
+```typescript Sign Up Example
+import { authClient } from '@/lib/auth-client';
+
+const handleSignUp = async (email: string, password: string, name: string) => {
+  const response = await authClient.signUp.email({
+    email,
+    password,
+    name,
+    callbackURL: '/', // Redirect after email verification
+  });
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  // User created successfully
+  // Email verification sent automatically
+};
+```
+
+```typescript With Error Handling
+import { authClient } from '@/lib/auth-client';
+
+try {
+  const response = await authClient.signUp.email(
+    {
+      email: 'user@example.com',
+      password: 'securePassword123',
+      name: 'John Doe',
+      callbackURL: '/dashboard',
+    }
+  );
+
+  if (response.error) {
+    console.error('Sign up failed:', response.error.message);
+    return;
+  }
+
+  // Show success message
+  alert('Account created! Please check your email for verification.');
+} catch (error) {
+  console.error('Unexpected error:', error);
+}
+```
+</CodeGroup>
+
+<Warning>
+After sign up, users must verify their email before they can sign in. The verification email is sent automatically by Better Auth.
+</Warning>
+
+### Sign In
+
+Authenticate existing users:
+
+<CodeGroup>
+```typescript Sign In Example
+import { authClient } from '@/lib/auth-client';
+
+const handleSignIn = async (email: string, password: string) => {
+  const response = await authClient.signIn.email({
+    email,
+    password,
+  });
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  // Session created successfully
+  // Cookie set automatically
+};
+```
+
+```typescript From AuthContext
+// From src/contexts/AuthContext.tsx
+const signIn = async (email: string, password: string) => {
+  try {
+    const response = await authClient.signIn.email({
+      email,
+      password,
+    });
+
+    const { error } = response;
+
+    if (error) {
+      throw error;
+    }
+
+    // Refresh session to load user data
+    await refreshSession();
+  } catch (error) {
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : 'Error al iniciar sesión';
+    throw new Error(errorMessage);
+  }
+};
+```
+</CodeGroup>
+
+### Sign Out
+
+End the user session:
+
+<CodeGroup>
+```typescript Sign Out
+import { authClient } from '@/lib/auth-client';
+
+const handleSignOut = async () => {
+  await authClient.signOut();
+  // Session cookie cleared automatically
+  // Redirect to home or login page
+};
+```
+</CodeGroup>
+
+## OAuth Authentication
+
+### Google Sign In
+
+Authenticate users via Google OAuth:
+
+<CodeGroup>
+```typescript Google OAuth
+import { authClient } from '@/lib/auth-client';
+
+const handleGoogleSignIn = async () => {
+  await authClient.signIn.social({
+    provider: 'google',
+    callbackURL: '/dashboard',
+  });
+  
+  // User will be redirected to Google for authentication
+  // After approval, redirected back to callbackURL
+};
+```
+
+```typescript In React Component
+import { authClient } from '@/lib/auth-client';
+
+function LoginPage() {
+  const handleGoogleLogin = () => {
+    authClient.signIn.social({
+      provider: 'google',
+      callbackURL: '/dashboard',
+    });
+  };
+
+  return (
+    <button onClick={handleGoogleLogin}>
+      Sign in with Google
+    </button>
+  );
+}
+```
+</CodeGroup>
+
+<Note>
+Google OAuth requires proper configuration on the backend with valid OAuth client credentials. Contact your administrator to ensure Google authentication is properly configured.
+</Note>
+
+## Password Reset Flow
+
+### Request Password Reset
+
+Send a password reset email to the user:
+
+<CodeGroup>
+```typescript Request Reset
+import { authClient } from '@/lib/auth-client';
+
+const handleForgotPassword = async (email: string) => {
+  const response = await authClient.forgetPassword({
+    email,
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  // Reset email sent successfully
+};
+```
+
+```typescript From AuthContext
+// From src/contexts/AuthContext.tsx
+const requestPasswordReset = async (email: string) => {
+  try {
+    const response = await authClient.forgetPassword({
+      email,
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    const { error } = response;
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error
+      ? error.message
+      : 'Error al solicitar restablecimiento de contraseña';
+    throw new Error(errorMessage);
+  }
+};
+```
+</CodeGroup>
+
+### Reset Password
+
+Complete the password reset with the token from the email:
+
+<CodeGroup>
+```typescript Reset Password
+import { authClient } from '@/lib/auth-client';
+
+const handleResetPassword = async (token: string, newPassword: string) => {
+  const { error } = await authClient.resetPassword({
+    newPassword,
+    token,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  // Password reset successfully
+  // User must sign in with new password
+};
+```
+
+```typescript Complete Flow
+// Get token from URL query parameters
+const searchParams = new URLSearchParams(window.location.search);
+const token = searchParams.get('token');
+
+if (!token) {
+  console.error('Reset token missing');
+  return;
+}
+
+try {
+  const { error } = await authClient.resetPassword({
+    newPassword: 'newSecurePassword123',
+    token,
+  });
+
+  if (error) {
+    console.error('Reset failed:', error.message);
+    return;
+  }
+
+  // Redirect to login page
+  window.location.href = '/login';
+} catch (error) {
+  console.error('Unexpected error:', error);
+}
+```
+</CodeGroup>
+
+<Warning>
+After a successful password reset, Better Auth does NOT create a session automatically. Users must sign in manually with their new password.
+</Warning>
+
+## Session Management
+
+### Get Current Session
+
+Retrieve the current user session:
+
+<CodeGroup>
+```typescript Get Session
+import { authClient } from '@/lib/auth-client';
+
+const getCurrentUser = async () => {
+  const { data } = await authClient.getSession();
+
+  if (data?.user) {
+    return data.user;
+  }
+
+  return null;
+};
+```
+
+```typescript useSession Hook (React)
+import { authClient } from '@/lib/auth-client';
+
+function Dashboard() {
+  const { data: session, isPending, error } = authClient.useSession();
+
+  if (isPending) return <div>Loading...</div>;
+  if (!session) return <div>Not logged in</div>;
+
+  return (
+    <div>
+      <h1>Welcome, {session.user.name}</h1>
+      <p>Email: {session.user.email}</p>
+    </div>
+  );
+}
+```
+</CodeGroup>
+
+### Refresh Session
+
+Manually refresh the session to get updated user data:
+
+<CodeGroup>
+```typescript Refresh Session
+// From src/contexts/AuthContext.tsx
+const refreshSession = async () => {
+  try {
+    const { data } = await authClient.getSession();
+
+    if (data?.user) {
+      const user = data.user as unknown as User;
+      
+      // Fetch user favorites
+      try {
+        const favoritesResponse = await api.users.getFavorites();
+        const favoriteIds = favoritesResponse.data?.map(
+          (property: Property) => property.id
+        ) || [];
+
+        setAuthState({
+          user,
+          loading: false,
+          error: null,
+          favoritePropertyIds: favoriteIds,
+          refreshingSession: false,
+        });
+      } catch {
+        setAuthState({
+          user,
+          loading: false,
+          error: null,
+          favoritePropertyIds: [],
+          refreshingSession: false,
+        });
+      }
+
+      return user;
+    } else {
+      setAuthState({
+        user: null,
+        loading: false,
+        error: null,
+        favoritePropertyIds: [],
+        refreshingSession: false,
+      });
+      return null;
+    }
+  } catch {
+    setAuthState({
+      user: null,
+      loading: false,
+      error: null,
+      favoritePropertyIds: [],
+      refreshingSession: false,
+    });
+    return null;
+  }
+};
+```
+</CodeGroup>
+
+## Authentication Context
+
+The application provides a React Context for managing authentication state:
+
+<CodeGroup>
+```typescript useAuth Hook
+import { useAuth } from '@/contexts/AuthContext';
+
+function MyComponent() {
+  const {
+    user,
+    loading,
+    error,
+    signIn,
+    signUp,
+    signOut,
+    refreshSession,
+    requestPasswordReset,
+    resetPassword,
+  } = useAuth();
+
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <div>Please sign in</div>;
+
+  return <div>Welcome, {user.name}!</div>;
+}
+```
+
+```typescript Available Methods
+interface AuthContextType {
+  // State
+  user: User | null;
+  loading: boolean;
+  error: string | null;
+  favoritePropertyIds: string[];
+  refreshingSession: boolean;
+
+  // Methods
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  refreshSession: () => Promise<User | null>;
+  
+  // Favorites
+  addToFavorites: (propertyId: string) => Promise<void>;
+  removeFromFavorites: (propertyId: string) => Promise<void>;
+  isFavorite: (propertyId: string) => boolean;
+  
+  // Password reset
+  requestPasswordReset: (email: string) => Promise<void>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
+}
+```
+</CodeGroup>
+
+## Session Cookies
+
+Better Auth uses secure, HTTP-only cookies for session management:
+
+- **Automatic inclusion**: The API client includes `credentials: "include"` in all requests
+- **Secure by default**: Cookies are HTTP-only and secure in production
+- **CORS support**: Backend must be configured to accept credentials from your frontend domain
+
+<Note>
+Ensure your API server is configured with proper CORS settings to accept credentials from your frontend domain. The `Access-Control-Allow-Credentials` header must be set to `true`.
+</Note>
+
+## User Roles
+
+Users can have one of two roles:
+
+- **user** - Standard user with access to public endpoints and their own data
+- **admin** - Administrator with access to all endpoints including admin operations
+
+<CodeGroup>
+```typescript Check User Role
+import { useAuth } from '@/contexts/AuthContext';
+
+function AdminPanel() {
+  const { user } = useAuth();
+
+  if (user?.role !== 'admin') {
+    return <div>Access denied</div>;
+  }
+
+  return <div>Admin panel content</div>;
+}
+```
+</CodeGroup>
+
+## Error Handling
+
+All authentication methods in the AuthContext include comprehensive error handling:
+
+<Steps>
+  <Step title="Error Translation">
+    Errors are translated using the `translateAuthError` utility for user-friendly messages
+  </Step>
+  
+  <Step title="State Updates">
+    Error messages are stored in the auth state for display in the UI
+  </Step>
+  
+  <Step title="Auto-Clear">
+    Errors automatically clear after 5 seconds to prevent stale error messages
+  </Step>
+  
+  <Step title="Error Propagation">
+    Errors are re-thrown to allow components to handle them locally
+  </Step>
+</Steps>
+
+<CodeGroup>
+```typescript Error Handling Example
+import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react';
+
+function LoginForm() {
+  const { signIn, error: authError } = useAuth();
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const handleSubmit = async (email: string, password: string) => {
+    try {
+      await signIn(email, password);
+      // Success - redirect or show success message
+    } catch (error) {
+      setLocalError(error.message);
+    }
+  };
+
+  return (
+    <form>
+      {authError && <div className="error">{authError}</div>}
+      {localError && <div className="error">{localError}</div>}
+      {/* Form fields */}
+    </form>
+  );
+}
+```
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use the Context" icon="circle-nodes">
+    Always use the `AuthProvider` and `useAuth` hook instead of calling `authClient` directly
+  </Card>
+  
+  <Card title="Handle Loading States" icon="spinner">
+    Check the `loading` state before rendering protected content
+  </Card>
+  
+  <Card title="Verify Email" icon="envelope-circle-check">
+    Remind users to verify their email after sign up
+  </Card>
+  
+  <Card title="Secure Redirects" icon="shield-check">
+    Always use absolute URLs for `callbackURL` and `redirectTo` parameters
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Properties API" icon="building" href="/api/properties">
+    Learn how to manage property listings
+  </Card>
+  
+  <Card title="Users API" icon="users" href="/api/users">
+    Manage user profiles and preferences
+  </Card>
+  
+  <Card title="Admin API" icon="shield" href="/api/admin">
+    Administrative operations for admins
+  </Card>
+  
+  <Card title="API Overview" icon="book" href="/api/overview">
+    Learn about API structure and error handling
+  </Card>
+</CardGroup>

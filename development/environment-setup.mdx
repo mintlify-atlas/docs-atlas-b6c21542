@@ -1,0 +1,248 @@
+---
+title: Environment Setup
+description: Set up your local development environment for the Inmobiliaria Web application
+---
+
+## Prerequisites
+
+Before starting development, ensure you have the following installed on your system:
+
+<Steps>
+  <Step title="Node.js">
+    Install Node.js version **18.0.0 or higher**. The project uses modern JavaScript features and requires a recent Node.js version.
+    
+    ```bash
+    node --version  # Should be v18.0.0 or higher
+    ```
+  </Step>
+
+  <Step title="PostgreSQL">
+    Install PostgreSQL **13 or higher** for the database. The schema uses modern PostgreSQL features including:
+    - Full-text search with `tsvector`
+    - GIN indexes
+    - Triggers and functions
+    
+    ```bash
+    psql --version  # Should be 13.0 or higher
+    ```
+  </Step>
+
+  <Step title="Git">
+    Git for version control and cloning the repository.
+    
+    ```bash
+    git --version
+    ```
+  </Step>
+</Steps>
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the Inmobiliaria Web repository to your local machine:
+    
+    ```bash
+    git clone <repository-url>
+    cd inmobiliaria-web
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all required npm packages using npm:
+    
+    ```bash
+    npm install
+    ```
+    
+    This will install all dependencies including:
+    - **React 19.2.3** - UI framework
+    - **TanStack Router** - Type-safe routing
+    - **Vite 7** - Build tool and dev server
+    - **TypeScript 5.8.3** - Type safety
+    - **Tailwind CSS** - Styling
+    - **Better Auth** - Authentication
+    - **Leaflet & Google Maps** - Map integrations
+    - **Lucide React** - Icon library
+  </Step>
+
+  <Step title="Set up the database">
+    Create a PostgreSQL database and run the schema:
+    
+    ```bash
+    # Create the database
+    createdb inmobiliaria
+    
+    # Run the schema file
+    psql -d inmobiliaria -f inmobiliaria_complete_schema.sql
+    ```
+    
+    <Note>
+      The schema file includes all table definitions, indexes, triggers, and sample data for property types, operation types, features, and tags.
+    </Note>
+  </Step>
+
+  <Step title="Configure environment variables">
+    Create a `.env` file in the project root with the required environment variables:
+    
+    ```bash
+    # API Configuration
+    VITE_API_URL=http://localhost:10000/api
+    ```
+    
+    <Warning>
+      The `VITE_` prefix is required for Vite to expose environment variables to the client-side code.
+    </Warning>
+    
+    See the [Configuration](/development/configuration) page for all available environment variables.
+  </Step>
+</Steps>
+
+## Development Server
+
+Start the development server with hot module replacement:
+
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:5173` (default Vite port).
+
+<Note>
+  Vite provides instant hot module replacement (HMR) for a fast development experience. Changes to your code will be reflected immediately without a full page reload.
+</Note>
+
+## Available Scripts
+
+The following npm scripts are available:
+
+<CodeGroup>
+
+```bash Development Server
+npm run dev
+# Starts Vite dev server with HMR
+# Runs on http://localhost:5173 by default
+```
+
+```bash Build for Production
+npm run build
+# Compiles TypeScript and builds optimized production bundle
+# Output: dist/ directory
+```
+
+```bash Lint Code
+npm run lint
+# Runs ESLint to check for code quality issues
+# Uses eslint-plugin-react-hooks and react-refresh plugins
+```
+
+```bash Preview Production Build
+npm run preview
+# Serves the production build locally for testing
+# Runs after npm run build
+```
+
+</CodeGroup>
+
+## Verify Installation
+
+To verify your setup is correct:
+
+<Steps>
+  <Step title="Check dependencies">
+    Ensure all packages installed successfully:
+    
+    ```bash
+    npm list --depth=0
+    ```
+  </Step>
+
+  <Step title="Verify TypeScript compilation">
+    Check that TypeScript compiles without errors:
+    
+    ```bash
+    npx tsc --noEmit
+    ```
+  </Step>
+
+  <Step title="Test database connection">
+    Verify PostgreSQL is running and accessible:
+    
+    ```bash
+    psql -d inmobiliaria -c "SELECT COUNT(*) FROM property_types;"
+    ```
+    
+    Should return 14 property types if the schema was loaded correctly.
+  </Step>
+
+  <Step title="Start the dev server">
+    Launch the development server and verify it runs without errors:
+    
+    ```bash
+    npm run dev
+    ```
+    
+    Visit `http://localhost:5173` in your browser.
+  </Step>
+</Steps>
+
+## Backend API Setup
+
+<Warning>
+  The frontend expects a backend API running at the configured `VITE_API_URL`. Make sure your backend server is running and accessible.
+</Warning>
+
+The default API endpoint is `http://localhost:10000/api`. The API base URL is determined by:
+
+1. `VITE_API_URL` environment variable (highest priority)
+2. Falls back to `http://localhost:10000/api` in both development and production
+
+See `src/lib/api.ts:7-17` for the API base URL configuration logic.
+
+## Troubleshooting
+
+<Accordion title="Port 5173 is already in use">
+  Vite will automatically try the next available port. You can also specify a custom port:
+  
+  ```bash
+  npm run dev -- --port 3000
+  ```
+</Accordion>
+
+<Accordion title="Module not found errors">
+  Clear node_modules and reinstall:
+  
+  ```bash
+  rm -rf node_modules package-lock.json
+  npm install
+  ```
+</Accordion>
+
+<Accordion title="Database connection errors">
+  Verify PostgreSQL is running:
+  
+  ```bash
+  pg_isready
+  ```
+  
+  Check your database credentials and connection settings in the backend configuration.
+</Accordion>
+
+<Accordion title="TypeScript errors">
+  Ensure you're using TypeScript 5.8.3:
+  
+  ```bash
+  npm list typescript
+  ```
+  
+  Restart your IDE's TypeScript server if errors persist.
+</Accordion>
+
+## Next Steps
+
+Now that your environment is set up:
+
+- Review the [Database Schema](/development/database-schema) to understand the data model
+- Learn about [Configuration](/development/configuration) options
+- Start developing with [TanStack Router](https://tanstack.com/router) for routing
+- Explore the [API Reference](/api/overview) for available endpoints

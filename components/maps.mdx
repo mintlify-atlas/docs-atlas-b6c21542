@@ -1,0 +1,410 @@
+---
+title: PropertyMap
+description: Interactive Google Maps components for displaying property locations with draggable marker support
+---
+
+## Overview
+
+The `PropertyMap` component provides Google Maps integration for displaying property locations. The package includes two variants: a standard read-only map and a draggable version for location editing.
+
+## Import
+
+```tsx
+import PropertyMap, { DraggablePropertyMap } from "../components/PropertyMap";
+```
+
+## PropertyMap (Read-Only)
+
+Standard map component for displaying a fixed property location.
+
+### Props
+
+<ParamField path="latitude" type="number" required>
+  Latitude coordinate of the property location
+</ParamField>
+
+<ParamField path="longitude" type="number" required>
+  Longitude coordinate of the property location
+</ParamField>
+
+<ParamField path="title" type="string" default="Ubicación de la propiedad">
+  Title displayed on the map marker tooltip
+</ParamField>
+
+<ParamField path="className" type="string" default="">
+  Additional CSS classes to apply to the map container
+</ParamField>
+
+<ParamField path="height" type="string" default="400px">
+  Height of the map container (CSS value)
+</ParamField>
+
+<ParamField path="zoom" type="number" default={15}>
+  Initial zoom level for the map (1-20)
+</ParamField>
+
+### Usage Examples
+
+<CodeGroup>
+```tsx Basic Usage
+import PropertyMap from "../components/PropertyMap";
+
+function PropertyDetail({ property }) {
+  return (
+    <section>
+      <h2>Location</h2>
+      <PropertyMap
+        latitude={property.latitude}
+        longitude={property.longitude}
+        title={property.title}
+      />
+    </section>
+  );
+}
+```
+
+```tsx Custom Height and Zoom
+import PropertyMap from "../components/PropertyMap";
+
+function LargeMapView() {
+  return (
+    <PropertyMap
+      latitude={-27.4516}
+      longitude={-58.9858}
+      title="Downtown Office"
+      height="600px"
+      zoom={18}
+      className="shadow-lg"
+    />
+  );
+}
+```
+
+```tsx Conditional Rendering
+import PropertyMap from "../components/PropertyMap";
+
+function PropertyLocation({ property }) {
+  if (!property.latitude || !property.longitude) {
+    return <div>Location not available</div>;
+  }
+
+  return (
+    <PropertyMap
+      latitude={property.latitude}
+      longitude={property.longitude}
+      title={property.title}
+      height="450px"
+    />
+  );
+}
+```
+</CodeGroup>
+
+## DraggablePropertyMap (Interactive)
+
+Map component with a draggable marker for location editing in forms.
+
+### Props
+
+Inherits all props from `PropertyMap` plus:
+
+<ParamField path="onLocationChange" type="(latitude: number, longitude: number) => void">
+  Callback function triggered when the marker is dragged to a new position. Receives the new latitude and longitude.
+</ParamField>
+
+<ParamField path="draggable" type="boolean" default={true}>
+  Whether the marker can be dragged. Set to false for a read-only draggable map.
+</ParamField>
+
+### Usage Examples
+
+<CodeGroup>
+```tsx Property Form
+import { DraggablePropertyMap } from "../components/PropertyMap";
+import { useState } from "react";
+
+function PropertyForm() {
+  const [location, setLocation] = useState({
+    latitude: -27.4516,
+    longitude: -58.9858,
+  });
+
+  const handleLocationChange = (lat: number, lng: number) => {
+    console.log("New location:", lat, lng);
+    setLocation({ latitude: lat, longitude: lng });
+  };
+
+  return (
+    <form>
+      <label>Property Location</label>
+      <p className="text-sm text-gray-600 mb-2">
+        Drag the marker to set the exact location
+      </p>
+      
+      <DraggablePropertyMap
+        latitude={location.latitude}
+        longitude={location.longitude}
+        title="Drag to set location"
+        height="400px"
+        zoom={15}
+        onLocationChange={handleLocationChange}
+        draggable={true}
+      />
+
+      <input type="hidden" name="latitude" value={location.latitude} />
+      <input type="hidden" name="longitude" value={location.longitude} />
+    </form>
+  );
+}
+```
+
+```tsx Edit Property
+import { DraggablePropertyMap } from "../components/PropertyMap";
+import { useState, useEffect } from "react";
+
+function EditPropertyLocation({ propertyId }) {
+  const [property, setProperty] = useState(null);
+  const [coordinates, setCoordinates] = useState({ lat: 0, lng: 0 });
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    // Load property data
+    fetchProperty(propertyId).then((data) => {
+      setProperty(data);
+      setCoordinates({
+        lat: data.latitude,
+        lng: data.longitude,
+      });
+    });
+  }, [propertyId]);
+
+  const handleLocationChange = (lat: number, lng: number) => {
+    setCoordinates({ lat, lng });
+    setHasChanges(true);
+  };
+
+  const handleSave = async () => {
+    await updatePropertyLocation(propertyId, coordinates);
+    setHasChanges(false);
+  };
+
+  if (!property) return <div>Loading...</div>;
+
+  return (
+    <div>
+      <h2>Edit Location</h2>
+      <DraggablePropertyMap
+        latitude={coordinates.lat}
+        longitude={coordinates.lng}
+        title={property.title}
+        onLocationChange={handleLocationChange}
+      />
+      {hasChanges && (
+        <button onClick={handleSave} className="mt-4">
+          Save Location
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+```tsx Geocoding Integration
+import { DraggablePropertyMap } from "../components/PropertyMap";
+import { useState } from "react";
+
+function AddressToMap() {
+  const [coords, setCoords] = useState({ lat: 0, lng: 0 });
+  const [address, setAddress] = useState("");
+
+  const geocodeAddress = async () => {
+    // Use geocoding API
+    const result = await geocode(address);
+    setCoords({
+      lat: result.latitude,
+      lng: result.longitude,
+    });
+  };
+
+  return (
+    <div>
+      <div className="mb-4">
+        <input
+          type="text"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="Enter address"
+          className="w-full p-2 border rounded"
+        />
+        <button onClick={geocodeAddress} className="mt-2">
+          Find on Map
+        </button>
+      </div>
+
+      <DraggablePropertyMap
+        latitude={coords.lat}
+        longitude={coords.lng}
+        onLocationChange={(lat, lng) => {
+          setCoords({ lat, lng });
+        }}
+      />
+
+      <p className="mt-2 text-sm text-gray-600">
+        Coordinates: {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
+      </p>
+    </div>
+  );
+}
+```
+</CodeGroup>
+
+## Features
+
+### Automatic Map Initialization
+
+Both components handle Google Maps API loading automatically:
+- Lazy loads the Google Maps JavaScript API
+- Uses `@googlemaps/js-api-loader` package
+- Caches the API instance for better performance
+- Includes Places library for additional features
+
+### Error Handling
+
+Graceful error handling for missing data:
+- Displays fallback UI when coordinates are missing
+- Shows error message if API key is not configured
+- Console logging for debugging
+
+### Fallback UI
+
+When coordinates are invalid or missing:
+
+```tsx
+<div className="bg-gray-100 border border-gray-300 rounded-lg flex items-center justify-center">
+  <div className="text-center text-gray-500">
+    <div className="text-lg font-medium mb-2">
+      Ubicación no disponible
+    </div>
+    <div className="text-sm">
+      No se pudo cargar la ubicación de la propiedad
+    </div>
+  </div>
+</div>
+```
+
+### Marker Features
+
+#### Read-Only Map
+- Fixed marker position
+- Marker title on hover
+- Automatic centering
+
+#### Draggable Map
+- Draggable marker (when `draggable={true}`)
+- `dragend` event triggers `onLocationChange`
+- Real-time coordinate updates
+
+### Map Controls
+
+Both components configure the map with:
+- Disabled map type control
+- Disabled street view control
+- Enabled fullscreen control
+- Greedy gesture handling (no Ctrl+scroll requirement)
+
+## Configuration
+
+### Environment Variables
+
+Both components require the Google Maps API key:
+
+```env
+VITE_GOOGLE_MAPS_API_KEY=your_api_key_here
+```
+
+### Google Maps API Setup
+
+1. Get an API key from [Google Cloud Console](https://console.cloud.google.com/)
+2. Enable the following APIs:
+   - Maps JavaScript API
+   - Places API (optional, for future features)
+3. Set up billing (required by Google)
+4. Add the key to your `.env` file
+
+## Google Maps Loader
+
+The components use a shared loader utility at `src/lib/googleMaps.ts:1`:
+
+```tsx
+import { ensureGoogleMaps } from "../lib/googleMaps";
+
+const google = await ensureGoogleMaps();
+```
+
+This utility:
+- Caches the Google Maps instance
+- Prevents multiple API loads
+- Returns a promise that resolves to the `google` object
+
+## Responsive Design
+
+Both components are fully responsive:
+- Container uses provided height (default 400px)
+- Width automatically fills parent container
+- Touch-friendly on mobile devices
+- Gesture handling optimized for mobile
+
+## Accessibility
+
+- Map container has `tabIndex={0}` for keyboard focus
+- Descriptive `aria-label` attributes
+- DraggablePropertyMap includes drag instructions in label
+
+### Aria Labels
+
+**PropertyMap:**
+```tsx
+aria-label={`Mapa mostrando la ubicación de ${title}`}
+```
+
+**DraggablePropertyMap:**
+```tsx
+aria-label={`Mapa interactivo mostrando la ubicación de ${title}. ${draggable ? "Arrastra el pin para ajustar la ubicación." : ""}`}
+```
+
+## Lifecycle Management
+
+Both components properly clean up resources:
+- Removes markers on unmount
+- Clears map instance references
+- Cancels pending API loads
+
+## TypeScript Types
+
+The components define internal types for Google Maps objects:
+
+```tsx
+type LatLngLiteral = { lat: number; lng: number };
+
+interface GoogleMapInstance {
+  setCenter: (latLng: LatLngLiteral) => void;
+  setZoom: (zoom: number) => void;
+}
+
+interface GoogleMarkerInstance {
+  setMap: (map: GoogleMapInstance | null) => void;
+  setPosition: (latLng: LatLngLiteral) => void;
+  addListener: (event: string, handler: () => void) => void;
+}
+```
+
+## Dependencies
+
+- `@googlemaps/js-api-loader` - Google Maps API loader
+- `react` - Hooks (useEffect, useRef)
+
+## Source Code
+
+- Standard map: `src/components/PropertyMap.tsx:42`
+- Draggable map: `src/components/PropertyMap.tsx:141`
+- Maps loader utility: `src/lib/googleMaps.ts:1`

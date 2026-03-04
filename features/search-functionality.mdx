@@ -1,0 +1,464 @@
+---
+title: Search Functionality
+description: Intelligent property search with multi-field matching, synonyms, autocomplete, and natural language query parsing
+---
+
+The search functionality provides users with a powerful and intuitive way to find properties using natural language queries, intelligent matching, and autocomplete suggestions.
+
+## Overview
+
+The search system includes:
+
+- Multi-field search across property attributes
+- Synonym-based matching for property types
+- Natural language query parsing
+- Real-time autocomplete suggestions
+- Case and accent-insensitive matching
+- URL-preserved search queries
+
+## Search Components
+
+### ListingsSearchBar
+
+The main search input component with autocomplete functionality.
+
+**Location**: `src/components/ListingsSearchBar.tsx`
+
+```tsx Search Bar Implementation
+import { useState } from "react";
+import { Search } from "lucide-react";
+
+const ListingsSearchBar = ({ onSearch, initialQuery }) => {
+  const [query, setQuery] = useState(initialQuery || "");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSearch(query);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="relative">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar propiedades..."
+        className="w-full px-4 py-2 rounded-lg border"
+      />
+      <button type="submit" className="absolute right-2 top-2">
+        <Search className="h-5 w-5" />
+      </button>
+    </form>
+  );
+};
+```
+
+## Search Algorithm
+
+The search implementation is located in `src/utils/search.ts` and provides comprehensive search capabilities.
+
+### Text Normalization
+
+All search queries and property data are normalized for consistent matching.
+
+```typescript Normalization Function
+// Remove accents and convert to lowercase
+const normalizeText = (text: string): string => {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove accents
+    .trim();
+};
+
+// Example usage:
+normalizeText("Departamento"); // "departamento"
+normalizeText("CASA");         // "casa"
+normalizeText("Terreno");      // "terreno"
+```
+
+### Property Type Synonyms
+
+The search system understands common synonyms for property types.
+
+<Tabs>
+  <Tab title="Casa">
+    **Synonyms**: house, home, vivienda, hogar
+    
+    ```
+    "casa" → matches "Casa", "house", "home"
+    "house" → matches "Casa", "vivienda"
+    ```
+  </Tab>
+  
+  <Tab title="Departamento">
+    **Synonyms**: apartment, depto, depart, piso
+    
+    ```
+    "departamento" → matches "apartment", "depto"
+    "depart" → matches "Departamento"
+    ```
+  </Tab>
+  
+  <Tab title="Terreno">
+    **Synonyms**: land, plot, lote, parcela
+    
+    ```
+    "terreno" → matches "land", "lote"
+    "plot" → matches "Terreno", "parcela"
+    ```
+  </Tab>
+  
+  <Tab title="Local">
+    **Synonyms**: commercial, tienda, negocio, oficina
+    
+    ```
+    "local" → matches "commercial", "tienda"
+    "negocio" → matches "Local comercial"
+    ```
+  </Tab>
+</Tabs>
+
+### Multi-Field Search
+
+Search queries are matched against multiple property fields:
+
+<Steps>
+
+<Step title="Property Information">
+  - Title
+  - Description
+  - Property type and subtype
+</Step>
+
+<Step title="Location Data">
+  - Street address and number
+  - City and province
+  - Neighborhood
+  - Postal code
+</Step>
+
+<Step title="Features and Tags">
+  - Property features (balcón, pileta, etc.)
+  - Tags (oportunidad, apto crédito, etc.)
+  - Custom characteristics
+</Step>
+
+</Steps>
+
+```typescript Multi-Field Search Implementation
+export const searchProperties = (
+  properties: Property[],
+  query: string
+): Property[] => {
+  if (!query.trim()) return properties;
+
+  // Remove common stop words
+  const stopWords = new Set([
+    "a", "al", "ante", "bajo", "con", "de", "desde",
+    "en", "entre", "para", "por", "sin", "sobre",
+    "el", "la", "los", "las", "un", "una", "y", "o"
+  ]);
+
+  const searchTerms = query
+    .trim()
+    .split(/\s+/)
+    .filter((term) => term.length > 0 && !stopWords.has(term.toLowerCase()));
+
+  return properties.filter((property) => {
+    // Create comprehensive search text
+    const searchableFields = [
+      property.title,
+      property.description,
+      property.address.street,
+      property.address.city,
+      property.address.state,
+      property.location?.neighborhood,
+      ...property.tags,
+      ...property.features,
+    ].filter(Boolean);
+
+    const searchableText = searchableFields.join(" ");
+
+    // Check if ANY search term matches (OR logic)
+    return searchTerms.some((term) => {
+      const normalizedTerm = normalizeText(term);
+      const normalizedText = normalizeText(searchableText);
+
+      return (
+        matchesPropertyType(normalizedTerm, property.propertyType) ||
+        normalizedText.includes(normalizedTerm)
+      );
+    });
+  });
+};
+```
+
+## Query Parsing
+
+The system can parse natural language queries into structured filters.
+
+### Supported Query Patterns
+
+<CodeGroup>
+
+```text Property Type
+"casa" → propertyType: ["casa"]
+"departamento 2 ambientes" → propertyType: ["departamento"]
+"local comercial" → propertyType: ["local"]
+```
+
+```text Listing Type
+"casa en venta" → listingType: ["venta"]
+"alquiler departamento" → listingType: ["alquiler"]
+"en renta" → listingType: ["alquiler"]
+```
+
+```text Bedrooms
+"3 dormitorios" → bedrooms: 3
+"2 dorm" → bedrooms: 2
+"4 habitaciones" → bedrooms: 4
+"2br" → bedrooms: 2
+```
+
+```text Price Ranges
+"100k-200k" → minPrice: 100000, maxPrice: 200000
+"desde 150000" → minPrice: 150000
+"hasta $200000" → maxPrice: 200000
+"mas de 100k" → minPrice: 100000
+```
+
+</CodeGroup>
+
+### Query Parser Implementation
+
+```typescript Parse Query to Filters
+export const parseQueryToFilters = (
+  query: string
+): Partial<PropertyFilters> & { query: string } => {
+  const original = query || "";
+  let working = original;
+  
+  const propertyTypes = new Set<string>();
+  const listingTypes = new Set<string>();
+  let bedrooms: number | undefined;
+  let minPrice: number | undefined;
+  let maxPrice: number | undefined;
+
+  // Extract listing type phrases "en venta" / "en alquiler"
+  const listingPhrases = [
+    { phrase: "en venta", type: "venta" },
+    { phrase: "en alquiler", type: "alquiler" },
+    { phrase: "en renta", type: "alquiler" },
+  ];
+
+  listingPhrases.forEach(({ phrase, type }) => {
+    if (working.toLowerCase().includes(phrase)) {
+      listingTypes.add(type);
+      working = working.replace(new RegExp(phrase, "gi"), " ");
+    }
+  });
+
+  // Extract bedrooms (e.g., 3 dorm, 2 habitaciones, 2br)
+  const bedroomsRegex = /(\d+)\s*(dormitorios?|dorms?|hab(?:itaciones)?|br|bed(?:rooms)?)/i;
+  const bedMatch = working.match(bedroomsRegex);
+  if (bedMatch) {
+    bedrooms = parseInt(bedMatch[1], 10);
+    working = working.replace(bedMatch[0], " ");
+  }
+
+  // Extract price ranges
+  const rangeRegex = /(\$?\s*[\d\.,]+\s*[km]?)[\s\-–a]+(\$?\s*[\d\.,]+\s*[km]?)/i;
+  const rangeMatch = working.match(rangeRegex);
+  if (rangeMatch) {
+    minPrice = parseAmount(rangeMatch[1]);
+    maxPrice = parseAmount(rangeMatch[2]);
+    working = working.replace(rangeMatch[0], " ");
+  }
+
+  return {
+    query: working.trim(),
+    propertyType: Array.from(propertyTypes),
+    listingType: Array.from(listingTypes),
+    bedrooms,
+    minPrice,
+    maxPrice,
+  };
+};
+```
+
+## Search Usage Examples
+
+<AccordionGroup>
+  <Accordion title="Basic Property Search">
+    ```
+    "casa" → Finds all houses
+    "depart" → Finds all apartments/departments
+    "local" → Finds all commercial properties
+    ```
+  </Accordion>
+
+  <Accordion title="Location-Based Search">
+    ```
+    "centro" → Finds properties in center/central areas
+    "palermo" → Finds properties in Palermo neighborhood
+    "buenos aires" → Finds properties in Buenos Aires
+    ```
+  </Accordion>
+
+  <Accordion title="Feature Search">
+    ```
+    "balcon" → Finds properties with balconies
+    "garage" → Finds properties with garage spaces
+    "pileta" → Finds properties with swimming pools
+    ```
+  </Accordion>
+
+  <Accordion title="Complex Queries">
+    ```
+    "casa palermo 3 dormitorios" → Houses in Palermo with 3+ bedrooms
+    "departamento centro garage" → Apartments in center with garage
+    "terreno en venta desde 100k" → Land for sale from $100,000
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Search Autocomplete
+
+Generate suggestions from existing property data.
+
+```typescript Generate Suggestions
+export const generateSearchSuggestions = (properties: Property[]): string[] => {
+  const suggestions = new Set<string>();
+
+  properties.forEach((property) => {
+    // Add property types
+    suggestions.add(property.propertyType);
+
+    // Add cities
+    if (property.address.city) {
+      suggestions.add(property.address.city);
+    }
+
+    // Add neighborhoods
+    if (property.location?.neighborhood) {
+      suggestions.add(property.location.neighborhood);
+    }
+
+    // Add features
+    property.features.forEach((feature) => {
+      suggestions.add(feature);
+    });
+  });
+
+  return Array.from(suggestions).sort();
+};
+```
+
+## Integration with ListingsPage
+
+The search functionality integrates seamlessly with the listings page.
+
+```tsx Search Integration
+const ListingsPage = () => {
+  const [searchFilters, setSearchFilters] = useState<PropertyFilters>({
+    query: searchParams.query || "",
+    // ... other filters
+  });
+
+  const handleSearch = (query: string) => {
+    // Parse natural language query into filters
+    const parsedFilters = parseQueryToFilters(query);
+    
+    // Update search filters
+    setSearchFilters({
+      query: parsedFilters.query,
+      propertyType: parsedFilters.propertyType || [],
+      listingType: parsedFilters.listingType || [],
+      minPrice: parsedFilters.minPrice,
+      maxPrice: parsedFilters.maxPrice,
+      bedrooms: parsedFilters.bedrooms,
+      bathrooms: undefined,
+      location: parsedFilters.location || "",
+      page: 1,
+      limit: 20,
+    });
+  };
+
+  return (
+    <ListingsSearchBar
+      onSearch={handleSearch}
+      initialQuery={searchFilters.query}
+    />
+  );
+};
+```
+
+## Performance Considerations
+
+<Warning>
+  **Client-Side Search**: When using a text query, the system fetches a larger dataset (limit: 100) and performs client-side filtering to support flexible OR logic and synonym matching.
+</Warning>
+
+<Note>
+  **Backend Search**: For simple filters without text queries, the backend handles all filtering efficiently.
+</Note>
+
+```typescript Search Strategy
+// If we have a text query, fetch broader results and filter client-side
+if (hasQuery) {
+  delete filtersToSend.query;
+  filtersToSend.limit = 100; // Fetch larger set
+}
+
+const response = await api.properties.list(filtersToSend);
+let data = response.data || [];
+
+// Apply client-side search for flexible matching
+if (hasQuery && searchFilters.query) {
+  data = searchProperties(data, searchFilters.query);
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="User Input" icon="keyboard">
+    - Trim whitespace from queries
+    - Handle empty search gracefully
+    - Preserve user input in URL
+    - Show search suggestions
+  </Card>
+  
+  <Card title="Performance" icon="gauge">
+    - Use debouncing for autocomplete
+    - Cache suggestions
+    - Limit result sets appropriately
+    - Optimize regex patterns
+  </Card>
+  
+  <Card title="Accessibility" icon="universal-access">
+    - Support keyboard navigation
+    - Provide ARIA labels
+    - Announce search results
+    - Clear visual focus indicators
+  </Card>
+  
+  <Card title="Internationalization" icon="globe">
+    - Support accent-insensitive search
+    - Handle multiple languages
+    - Provide localized synonyms
+    - Use Unicode normalization
+  </Card>
+</CardGroup>
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="Property Listings" icon="list" href="/features/property-listings">
+    Browse and display property listings
+  </Card>
+  <Card title="Filters" icon="filter" href="/features/property-listings#filtering-system">
+    Advanced filtering options
+  </Card>
+</CardGroup>

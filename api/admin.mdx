@@ -1,0 +1,636 @@
+---
+title: Admin API
+description: Administrative endpoints for managing properties, users, and viewing analytics
+---
+
+## Overview
+
+The Admin API provides privileged endpoints for administrative operations. All endpoints require authentication with admin role.
+
+**Base Path:** `/api/admin`
+
+<Warning>
+All admin endpoints require the user to have the `admin` role. Unauthorized access will return a 403 Forbidden error.
+</Warning>
+
+---
+
+## Get Admin Statistics
+
+<CodeGroup>
+```typescript GET /admin/stats
+const response = await api.admin.getStats();
+```
+</CodeGroup>
+
+Retrieve dashboard statistics including property counts, user metrics, and recent activity.
+
+### Authentication
+
+Requires admin role. Returns 403 if user is not an administrator.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="AdminStats" required>
+  Admin statistics object
+  
+  <Expandable title="AdminStats structure">
+    <ResponseField name="totalProperties" type="number">
+      Total number of properties in the system
+    </ResponseField>
+    
+    <ResponseField name="activeProperties" type="number">
+      Number of properties with "activo" status
+    </ResponseField>
+    
+    <ResponseField name="pendingProperties" type="number">
+      Number of properties with "pendiente" status
+    </ResponseField>
+    
+    <ResponseField name="totalUsers" type="number">
+      Total registered users
+    </ResponseField>
+    
+    <ResponseField name="totalViews" type="number">
+      Aggregate view count across all properties
+    </ResponseField>
+    
+    <ResponseField name="recentProperties" type="object[]">
+      Array of recently created properties
+      
+      <Expandable title="Recent property structure">
+        <ResponseField name="id" type="string">
+          Property ID
+        </ResponseField>
+        
+        <ResponseField name="title" type="string">
+          Property title
+        </ResponseField>
+        
+        <ResponseField name="createdAt" type="string">
+          ISO 8601 timestamp
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "totalProperties": 156,
+    "activeProperties": 142,
+    "pendingProperties": 8,
+    "totalUsers": 1247,
+    "totalViews": 45623,
+    "recentProperties": [
+      {
+        "id": "789",
+        "title": "Departamento 2 ambientes Palermo",
+        "createdAt": "2024-03-04T10:30:00Z"
+      },
+      {
+        "id": "788",
+        "title": "Casa 3 dormitorios con jardín",
+        "createdAt": "2024-03-03T15:45:00Z"
+      }
+    ]
+  }
+}
+```
+
+### Usage Example
+
+From `src/pages/AdminPage.tsx:65`:
+
+```typescript
+const statsResponse = await api.admin.getStats();
+setStats(statsResponse.data);
+```
+
+---
+
+## Get All Properties (Admin)
+
+<CodeGroup>
+```typescript GET /admin/properties
+const response = await api.admin.getProperties();
+```
+</CodeGroup>
+
+Retrieve all properties in the system, including those with any status. This endpoint returns properties that may be hidden from public listings.
+
+### Authentication
+
+Requires admin role.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="Property[]" required>
+  Array of all properties with complete details including:
+  - All statuses (activo, pendiente, vendido, alquilado, pausado)
+  - User/owner information
+  - View counts and analytics
+  - Administrative metadata
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "123",
+      "title": "Casa en Palermo",
+      "status": "pendiente",
+      "userId": "456",
+      "viewsCount": 234,
+      "createdAt": "2024-03-01T10:00:00Z",
+      "updatedAt": "2024-03-04T14:30:00Z"
+      // ... other property fields
+    }
+  ]
+}
+```
+
+### Usage Example
+
+From `src/pages/AdminPage.tsx:59`:
+
+```typescript
+const propertiesResponse = await api.admin.getProperties();
+setProperties(propertiesResponse.data);
+```
+
+---
+
+## Get All Users
+
+<CodeGroup>
+```typescript GET /admin/users
+const response = await api.admin.getUsers();
+```
+</CodeGroup>
+
+Retrieve all registered users with their profile information and roles.
+
+### Authentication
+
+Requires admin role.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="User[]" required>
+  Array of user objects
+  
+  <Expandable title="User object structure">
+    <ResponseField name="id" type="string">
+      Unique user identifier
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      User's email address
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      User's full name
+    </ResponseField>
+    
+    <ResponseField name="role" type="string">
+      User role ("user" or "admin")
+    </ResponseField>
+    
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp of account creation
+    </ResponseField>
+    
+    <ResponseField name="emailVerified" type="string">
+      ISO 8601 timestamp of email verification (null if not verified)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "123",
+      "email": "user@example.com",
+      "name": "Juan Pérez",
+      "role": "user",
+      "createdAt": "2024-01-15T10:30:00Z",
+      "emailVerified": "2024-01-15T11:00:00Z"
+    },
+    {
+      "id": "456",
+      "email": "admin@example.com",
+      "name": "Admin User",
+      "role": "admin",
+      "createdAt": "2023-12-01T09:00:00Z",
+      "emailVerified": "2023-12-01T09:05:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## Update User Role
+
+<CodeGroup>
+```typescript PUT /admin/users/:id/role
+const response = await api.admin.updateUserRole("123", "admin");
+```
+</CodeGroup>
+
+Update a user's role (promote to admin or demote to user).
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The user ID to update
+</ParamField>
+
+### Request Body
+
+<ParamField body="role" type="string" required>
+  New role for the user. Must be either "user" or "admin"
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the role was updated successfully
+</ResponseField>
+
+<ResponseField name="data" type="User" required>
+  Updated user object with new role
+</ResponseField>
+
+### Example Request
+
+```typescript
+await api.admin.updateUserRole("123", "admin");
+```
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "123",
+    "email": "user@example.com",
+    "name": "Juan Pérez",
+    "role": "admin",
+    "updatedAt": "2024-03-04T16:45:00Z"
+  }
+}
+```
+
+<Warning>
+Promoting users to admin grants them full access to administrative functions. Use with caution.
+</Warning>
+
+---
+
+## Update Property Status
+
+<CodeGroup>
+```typescript PUT /admin/properties/:id/status
+const response = await api.admin.updatePropertyStatus("123", "activo");
+```
+</CodeGroup>
+
+Update a property's status (activate, pause, mark as sold, etc.).
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The property ID to update
+</ParamField>
+
+### Request Body
+
+<ParamField body="status" type="string" required>
+  New status for the property. Valid values:
+  - `activo` - Active/published listing
+  - `pendiente` - Pending review
+  - `vendido` - Sold
+  - `alquilado` - Rented
+  - `pausado` - Paused/hidden
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the status was updated successfully
+</ResponseField>
+
+<ResponseField name="data" type="Property" required>
+  Updated property object with new status
+</ResponseField>
+
+### Example Request
+
+```typescript
+await api.admin.updatePropertyStatus("123", "vendido");
+```
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "123",
+    "title": "Casa en Palermo",
+    "status": "vendido",
+    "updatedAt": "2024-03-04T17:00:00Z"
+    // ... other property fields
+  }
+}
+```
+
+### Usage Example
+
+From `src/pages/AdminPage.tsx:135`:
+
+```typescript
+const handleStatusChange = async (propertyId: string, newStatus: string) => {
+  try {
+    await api.admin.updatePropertyStatus(propertyId, newStatus);
+    toast.success("Estado actualizado");
+    // Refresh property list
+    loadProperties();
+  } catch (error) {
+    toast.error("Error al actualizar estado");
+  }
+};
+```
+
+---
+
+## Create Admin User
+
+<CodeGroup>
+```typescript POST /admin/create-admin
+const response = await api.admin.createAdmin({
+  email: "newadmin@example.com",
+  password: "securePassword123",
+  name: "New Admin"
+});
+```
+</CodeGroup>
+
+Create a new user account with admin privileges. This is useful for initial setup or adding new administrators.
+
+### Request Body
+
+<ParamField body="email" type="string" required>
+  Email address for the new admin (must be unique)
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Secure password (minimum 8 characters recommended)
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Full name of the admin user
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the admin was created successfully
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  <Expandable title="Created admin response">
+    <ResponseField name="id" type="string">
+      ID of the newly created admin user
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      Admin email address
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Admin name
+    </ResponseField>
+    
+    <ResponseField name="role" type="string">
+      Will be "admin"
+    </ResponseField>
+    
+    <ResponseField name="message" type="string">
+      Success message
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Request
+
+```typescript
+const response = await api.admin.createAdmin({
+  email: "admin@inmobiliaria.com",
+  password: "SecurePass123!",
+  name: "Admin Principal"
+});
+```
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "789",
+    "email": "admin@inmobiliaria.com",
+    "name": "Admin Principal",
+    "role": "admin",
+    "message": "Admin user created successfully"
+  }
+}
+```
+
+<Warning>
+This endpoint should be protected and only accessible to existing administrators. Consider implementing rate limiting to prevent abuse.
+</Warning>
+
+---
+
+## Error Responses
+
+All admin endpoints may return the following errors:
+
+### Common Status Codes
+
+- `200` - Success
+- `400` - Bad Request (invalid parameters)
+- `401` - Unauthorized (not logged in)
+- `403` - Forbidden (not an admin)
+- `404` - Not Found (resource doesn't exist)
+- `500` - Internal Server Error
+
+### Error Examples
+
+<CodeGroup>
+```json FORBIDDEN
+{
+  "message": "Admin access required",
+  "code": "FORBIDDEN"
+}
+```
+
+```json VALIDATION_ERROR
+{
+  "message": "Invalid status value. Must be one of: activo, pendiente, vendido, alquilado, pausado",
+  "code": "VALIDATION_ERROR"
+}
+```
+
+```json USER_NOT_FOUND
+{
+  "message": "User not found",
+  "code": "NOT_FOUND"
+}
+```
+
+```json EMAIL_TAKEN
+{
+  "message": "Email address already in use",
+  "code": "EMAIL_TAKEN"
+}
+```
+</CodeGroup>
+
+---
+
+## Admin Dashboard Example
+
+Here's a complete example of building an admin dashboard:
+
+```typescript
+const AdminDashboard = () => {
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadAdminData = async () => {
+      try {
+        const [statsRes, propertiesRes, usersRes] = await Promise.all([
+          api.admin.getStats(),
+          api.admin.getProperties(),
+          api.admin.getUsers()
+        ]);
+
+        setStats(statsRes.data);
+        setProperties(propertiesRes.data);
+        setUsers(usersRes.data);
+      } catch (error) {
+        if (error.message.includes('403')) {
+          toast.error("No tienes permisos de administrador");
+          navigate('/');
+        } else {
+          toast.error("Error cargando datos de administración");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAdminData();
+  }, []);
+
+  const handleStatusChange = async (propertyId: string, newStatus: string) => {
+    await api.admin.updatePropertyStatus(propertyId, newStatus);
+    toast.success("Estado actualizado");
+    // Refresh properties
+    const response = await api.admin.getProperties();
+    setProperties(response.data);
+  };
+
+  if (loading) return <LoadingSpinner />;
+
+  return (
+    <div className="admin-dashboard">
+      <StatsCards stats={stats} />
+      <PropertiesTable 
+        properties={properties} 
+        onStatusChange={handleStatusChange}
+      />
+      <UsersTable users={users} />
+    </div>
+  );
+};
+```
+
+---
+
+## Security Considerations
+
+### Role-Based Access Control
+
+All admin endpoints verify the user's role:
+
+```typescript
+// Server-side middleware example
+const requireAdmin = async (req, res, next) => {
+  const user = await getCurrentUser(req);
+  
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({
+      message: 'Admin access required',
+      code: 'FORBIDDEN'
+    });
+  }
+  
+  next();
+};
+```
+
+### Audit Logging
+
+Consider logging all administrative actions:
+
+```typescript
+// Log admin actions
+await logAdminAction({
+  userId: admin.id,
+  action: 'UPDATE_PROPERTY_STATUS',
+  propertyId: '123',
+  oldValue: 'activo',
+  newValue: 'vendido',
+  timestamp: new Date()
+});
+```
+
+---
+
+## Related Documentation
+
+- [Properties API](/api/properties) - Property management
+- [Users API](/api/users) - User profile management
+- [Authentication](/api/authentication) - Login and role management

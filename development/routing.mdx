@@ -1,0 +1,568 @@
+---
+title: Routing System
+description: Understanding TanStack Router configuration, route definitions, and navigation in Inmobiliaria Web
+---
+
+Inmobiliaria Web uses **TanStack Router** for type-safe, file-based routing with automatic code splitting.
+
+## Overview
+
+<CardGroup cols={2}>
+  <Card title="File-Based" icon="folder-tree">
+    Routes automatically discovered from `src/routes/` directory
+  </Card>
+  <Card title="Type-Safe" icon="shield-check">
+    Full TypeScript support with autocomplete
+  </Card>
+  <Card title="Code Splitting" icon="scissors">
+    Automatic route-based code splitting
+  </Card>
+  <Card title="Nested Layouts" icon="layer-group">
+    Support for layout routes and nested routing
+  </Card>
+</CardGroup>
+
+## Router Configuration
+
+### Setup in `src/main.tsx`
+
+The router is created and configured at the application entry point:
+
+```typescript title="src/main.tsx" {8,11-14,17-21}
+import { StrictMode } from "react";
+import ReactDOM from "react-dom/client";
+import { RouterProvider, createRouter } from "@tanstack/react-router";
+import { Toaster } from "react-hot-toast";
+import "./index.css";
+
+// Import the generated route tree
+import { routeTree } from "./routeTree.gen";
+
+// Create a new router instance
+const router = createRouter({
+  routeTree,
+  scrollRestoration: true,  // Auto-restore scroll position
+});
+
+// Register the router instance for type safety
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
+
+// Render the app
+const rootElement = document.getElementById("root")!;
+if (!rootElement.innerHTML) {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <StrictMode>
+      <RouterProvider router={router} />
+      <Toaster position="top-right" />
+    </StrictMode>
+  );
+}
+```
+
+<Note>
+  The `scrollRestoration: true` option automatically restores scroll position when navigating back/forward through browser history.
+</Note>
+
+## File-Based Routing
+
+### Route File Naming Conventions
+
+TanStack Router uses file names to determine route paths:
+
+| File Name | Route Path | Description |
+|-----------|-----------|-------------|
+| `index.tsx` | `/` | Index route of parent |
+| `nosotros.tsx` | `/nosotros` | Static route |
+| `$propertyId.tsx` | `/:propertyId` | Dynamic parameter |
+| `p.$slug.tsx` | `/p/:slug` | Segment + dynamic param |
+| `__root.tsx` | N/A | Root layout |
+| `admin.tsx` | `/admin` | Layout route (with children) |
+
+### Route File Structure
+
+```
+routes/
+├── __root.tsx           → Root layout (always rendered)
+├── index.tsx            → / (homepage)
+├── nosotros.tsx         → /nosotros
+├── servicios.tsx        → /servicios
+├── propiedades.tsx      → /propiedades (layout)
+├── propiedades.index.tsx → /propiedades (content)
+├── propiedades.$propertyId.tsx → /propiedades/:id
+└── admin/
+    ├── index.tsx        → /admin
+    └── property/
+        └── new.tsx      → /admin/property/new
+```
+
+## Root Route
+
+### `src/routes/__root.tsx`
+
+The root route defines the base layout for all pages:
+
+```typescript title="src/routes/__root.tsx"
+import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { AuthProvider } from "../contexts/AuthContext";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+import WhatsAppButton from "../components/WhatsAppButton";
+
+export const Route = createRootRoute({
+  component: () => (
+    <AuthProvider>
+      <Header />
+      <Outlet />  {/* Child routes render here */}
+      <Footer />
+      <WhatsAppButton />
+      <TanStackRouterDevtools />
+    </AuthProvider>
+  ),
+});
+```
+
+<Info>
+  The `<Outlet />` component is where child routes are rendered. This enables nested layouts.
+</Info>
+
+## Route Definition Examples
+
+### Simple Route
+
+```typescript title="src/routes/index.tsx"
+import { createFileRoute } from "@tanstack/react-router";
+import HomePage from "../pages/HomePage";
+
+export const Route = createFileRoute("/")({
+  component: HomePage,
+});
+```
+
+### Dynamic Route with Parameters
+
+```typescript title="src/routes/propiedades.$propertyId.tsx"
+import { createFileRoute } from "@tanstack/react-router";
+import PropertyDetailPage from "../pages/PropertyDetailPage";
+
+export const Route = createFileRoute("/propiedades/$propertyId")({
+  component: PropertyDetailPage,
+});
+
+// Access params in component:
+function PropertyDetailPage() {
+  const { propertyId } = Route.useParams();
+  // ...
+}
+```
+
+### Layout Route
+
+Layout routes render an `<Outlet />` for child routes:
+
+```typescript title="src/routes/admin.tsx"
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+import SecureRoute from "../components/SecureRoute";
+
+export const Route = createFileRoute("/admin")({
+  component: () => (
+    <SecureRoute requiredRole="admin">
+      <div className="admin-layout">
+        <aside>Admin Sidebar</aside>
+        <main>
+          <Outlet />  {/* Child admin routes */}
+        </main>
+      </div>
+    </SecureRoute>
+  ),
+});
+```
+
+### Protected Route
+
+Use the `SecureRoute` component to protect routes:
+
+```typescript title="src/routes/favorites.tsx"
+import { createFileRoute } from "@tanstack/react-router";
+import SecureRoute from "../components/SecureRoute";
+import FavoritesPage from "../pages/FavoritesPage";
+
+export const Route = createFileRoute("/favorites")({
+  component: () => (
+    <SecureRoute>
+      <FavoritesPage />
+    </SecureRoute>
+  ),
+});
+```
+
+## Route Tree Generation
+
+### Auto-Generated `src/routeTree.gen.ts`
+
+The TanStack Router Vite plugin automatically generates a type-safe route tree:
+
+```typescript title="src/routeTree.gen.ts" (excerpt)
+// This file is automatically generated by TanStack Router
+// You should NOT make any changes in this file
+
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
+// ... more imports
+
+export const routeTree = rootRouteImport
+  ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>()
+```
+
+<Warning>
+  **Never edit `src/routeTree.gen.ts` manually.** It is regenerated on every file change during development.
+</Warning>
+
+### Vite Plugin Configuration
+
+```typescript title="vite.config.ts" {7-10}
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
+
+export default defineConfig({
+  plugins: [
+    tanstackRouter({
+      target: "react",
+      autoCodeSplitting: true,  // Split code by route
+    }),
+    react(),
+  ],
+});
+```
+
+## Navigation
+
+### Using `Link` Component
+
+Type-safe navigation with the `Link` component:
+
+```typescript
+import { Link } from "@tanstack/react-router";
+
+function Navigation() {
+  return (
+    <nav>
+      <Link to="/">Home</Link>
+      <Link to="/nosotros">About</Link>
+      <Link 
+        to="/propiedades/$propertyId" 
+        params={{ propertyId: "123" }}
+      >
+        Property 123
+      </Link>
+    </nav>
+  );
+}
+```
+
+### Programmatic Navigation
+
+Navigate programmatically using the `useNavigate` hook:
+
+```typescript
+import { useNavigate } from "@tanstack/react-router";
+
+function MyComponent() {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    navigate({ to: "/admin" });
+  };
+
+  const handlePropertyClick = (id: string) => {
+    navigate({ 
+      to: "/propiedades/$propertyId",
+      params: { propertyId: id }
+    });
+  };
+
+  return <button onClick={handleClick}>Go to Admin</button>;
+}
+```
+
+### Search Parameters
+
+Handle query parameters type-safely:
+
+```typescript
+import { useSearch } from "@tanstack/react-router";
+
+// Define search params schema
+type SearchParams = {
+  type?: string;
+  minPrice?: number;
+  maxPrice?: number;
+};
+
+function ListingsPage() {
+  const search = useSearch({ from: "/propiedades" });
+  
+  console.log(search.type);     // Type-safe access
+  console.log(search.minPrice);
+  
+  return <div>Listings</div>;
+}
+
+// Link with search params
+<Link 
+  to="/propiedades" 
+  search={{ type: "casa", minPrice: 100000 }}
+>
+  View Houses
+</Link>
+```
+
+## Route Organization
+
+### Public Routes
+
+```
+/                      → Homepage
+/nosotros              → About page
+/servicios             → Services page
+/quiero-vender         → Sell property page
+/propiedades           → Property listings
+/propiedades/:id       → Property details
+/propiedades/p/:slug   → Property details (SEO-friendly)
+```
+
+### Authentication Routes
+
+```
+/auth                  → Login/Register
+/auth/forgot-password  → Forgot password form
+/auth/reset-password   → Reset password form
+/auth/verify-email     → Email verification
+/auth/verify-email-pending → Verification pending message
+```
+
+### Protected Routes
+
+```
+/favorites             → User favorites (requires login)
+/admin                 → Admin dashboard (requires admin role)
+/admin/property/new    → Create property (requires admin)
+/admin/property/edit/:id → Edit property (requires admin)
+```
+
+## Route Params & Hooks
+
+<AccordionGroup>
+  <Accordion title="useParams">
+    Access dynamic route parameters:
+    ```typescript
+    const { propertyId } = Route.useParams();
+    ```
+  </Accordion>
+
+  <Accordion title="useNavigate">
+    Programmatically navigate between routes:
+    ```typescript
+    const navigate = useNavigate();
+    navigate({ to: "/admin" });
+    ```
+  </Accordion>
+
+  <Accordion title="useSearch">
+    Access and manage URL search parameters:
+    ```typescript
+    const search = useSearch({ from: "/propiedades" });
+    ```
+  </Accordion>
+
+  <Accordion title="useLocation">
+    Get current location information:
+    ```typescript
+    const location = useLocation();
+    console.log(location.pathname);
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Route Guards & Protection
+
+### SecureRoute Component
+
+The `SecureRoute` component protects routes based on authentication and roles:
+
+```typescript title="src/components/SecureRoute.tsx" (simplified)
+import { useAuth } from "../contexts/AuthContext";
+import { Navigate } from "@tanstack/react-router";
+
+interface SecureRouteProps {
+  children: React.ReactNode;
+  requiredRole?: "admin" | "agent";
+}
+
+export default function SecureRoute({ 
+  children, 
+  requiredRole 
+}: SecureRouteProps) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) return <div>Loading...</div>;
+  
+  if (!user) {
+    return <Navigate to="/auth" />;
+  }
+
+  if (requiredRole && user.role !== requiredRole) {
+    return <Navigate to="/" />;
+  }
+
+  return <>{children}</>;
+}
+```
+
+## Code Splitting
+
+TanStack Router automatically splits code by route when `autoCodeSplitting: true` is enabled:
+
+```typescript title="vite.config.ts"
+tanstackRouter({
+  target: "react",
+  autoCodeSplitting: true,  // Each route becomes a separate chunk
+}),
+```
+
+**Benefits:**
+- Smaller initial bundle size
+- Faster page loads
+- Routes loaded on demand
+
+## Developer Tools
+
+### TanStack Router Devtools
+
+The devtools are included in development mode:
+
+```typescript title="src/routes/__root.tsx"
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+
+export const Route = createRootRoute({
+  component: () => (
+    <>
+      {/* Your layout */}
+      <TanStackRouterDevtools />  {/* Only in dev mode */}
+    </>
+  ),
+});
+```
+
+**Features:**
+- Visual route tree explorer
+- Active route highlighting
+- Params and search inspection
+- Navigation history
+
+<Tip>
+  Press the TanStack Router icon in the bottom corner of your dev app to open the devtools.
+</Tip>
+
+## Route Patterns
+
+<CardGroup cols={2}>
+  <Card title="Index Routes" icon="house">
+    Use `index.tsx` for default route content
+    ```
+    /propiedades → propiedades.index.tsx
+    ```
+  </Card>
+  
+  <Card title="Pathless Routes" icon="layer-group">
+    Use layouts without changing the URL
+    ```
+    admin.tsx → Layout for /admin/*
+    ```
+  </Card>
+  
+  <Card title="Dynamic Segments" icon="dollar">
+    Use `$param` for dynamic values
+    ```
+    $propertyId.tsx → /:propertyId
+    ```
+  </Card>
+  
+  <Card title="Nested Routes" icon="sitemap">
+    Use folders for route nesting
+    ```
+    admin/property/new.tsx
+    ```
+  </Card>
+</CardGroup>
+
+## Migration from React Router
+
+If migrating from React Router, key differences:
+
+| React Router | TanStack Router |
+|--------------|----------------|
+| `<Routes>` + `<Route>` | File-based routing |
+| `useParams()` | `Route.useParams()` |
+| `useSearchParams()` | `useSearch()` |
+| Manual code splitting | Automatic |
+| Runtime type checking | Compile-time type safety |
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep Route Files Simple">
+    Route files should only define the route and reference page components:
+    ```typescript
+    // Good
+    export const Route = createFileRoute("/nosotros")({
+      component: AboutPage,
+    });
+
+    // Avoid heavy logic in route files
+    ```
+  </Accordion>
+
+  <Accordion title="Use Layout Routes">
+    Extract common layouts to avoid duplication:
+    ```typescript
+    // admin.tsx provides layout for all /admin/* routes
+    export const Route = createFileRoute("/admin")({
+      component: AdminLayout,
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Type Your Search Params">
+    Define types for search parameters:
+    ```typescript
+    type SearchParams = {
+      page?: number;
+      type?: string;
+    };
+    ```
+  </Accordion>
+
+  <Accordion title="Leverage Code Splitting">
+    Let the router handle code splitting automatically - don't manually lazy load route components.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tech Stack" icon="layer-group" href="/development/tech-stack">
+    Learn about the technologies used
+  </Card>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Explore the codebase organization
+  </Card>
+</CardGroup>

@@ -1,0 +1,718 @@
+---
+title: Property Management
+description: Create, edit, and manage property listings with rich media support, drag-and-drop image ordering, and comprehensive property details
+---
+
+The property management system provides administrators with powerful tools to create and edit property listings with detailed information, images, and location data.
+
+## Overview
+
+Property management features include:
+
+- Create new property listings
+- Edit existing properties
+- Rich property details form
+- Multi-image upload with drag-and-drop ordering
+- Image rotation and main image selection
+- Interactive map for location selection
+- Address autocomplete
+- Property status management
+- YouTube video integration
+- Custom characteristics and tags
+
+## PropertyFormPage Component
+
+The main form for creating and editing properties.
+
+**Location**: `src/pages/PropertyFormPage.tsx`
+
+### Form Structure
+
+<Tabs>
+  <Tab title="Basic Information">
+    ```tsx
+    <div className="bg-white rounded-lg shadow-sm p-6">
+      <h2 className="text-lg font-semibold mb-6">
+        Información Básica
+      </h2>
+      
+      {/* Title */}
+      <input
+        type="text"
+        value={formData.title}
+        onChange={(e) => handleInputChange("title", e.target.value)}
+        className="w-full px-3 py-2 border rounded-lg"
+      />
+      
+      {/* Property Type */}
+      <select
+        value={formData.propertyTypeId ?? ""}
+        onChange={(e) => {
+          const selectedId = parseInt(e.target.value);
+          handleInputChange("propertyTypeId", selectedId);
+        }}
+      >
+        <option value="">Seleccionar tipo</option>
+        {metadata?.propertyTypes?.map((type) => (
+          <option key={type.id} value={type.id}>
+            {type.name}
+          </option>
+        ))}
+      </select>
+      
+      {/* Property Subtype (dynamic based on type) */}
+      <select
+        value={formData.propertySubtypeId ?? ""}
+        disabled={!formData.propertyTypeId}
+      >
+        {propertySubtypes.map((subtype) => (
+          <option key={subtype.id} value={subtype.id}>
+            {subtype.name}
+          </option>
+        ))}
+      </select>
+    </div>
+    ```
+  </Tab>
+  
+  <Tab title="Pricing">
+    ```tsx
+    {/* Price with formatted display */}
+    <input
+      type="text"
+      value={priceInput}
+      onChange={(e) => {
+        const value = e.target.value.replace(/\D/g, "");
+        const numeric = parseInt(value, 10);
+        handleInputChange("price", numeric);
+        setPriceInput(formatThousandsAr(numeric));
+      }}
+      placeholder="0"
+    />
+    
+    {/* Currency */}
+    <select
+      value={formData.currencyId ?? ""}
+      onChange={(e) => {
+        const selectedId = parseInt(e.target.value);
+        handleInputChange("currencyId", selectedId);
+      }}
+    >
+      {metadata?.currencies?.map((currency) => (
+        <option key={currency.id} value={currency.id}>
+          {currency.code} ({currency.symbol})
+        </option>
+      ))}
+    </select>
+    
+    {/* Original Price (for discounts) */}
+    <input
+      type="text"
+      value={formData.originalPrice || ""}
+      placeholder="Precio original (opcional)"
+    />
+    
+    {/* Monthly Expenses */}
+    <input
+      type="text"
+      value={expensesInput}
+      placeholder="Expensas mensuales"
+    />
+    ```
+  </Tab>
+  
+  <Tab title="Property Details">
+    ```tsx
+    {/* Surface Areas */}
+    <input
+      type="number"
+      value={formData.surfaceCovered || ""}
+      onChange={(e) => handleInputChange(
+        "surfaceCovered", 
+        parseFloat(e.target.value)
+      )}
+      placeholder="Superficie cubierta (m²)"
+    />
+    
+    <input
+      type="number"
+      value={formData.surfaceUncovered || ""}
+      placeholder="Superficie descubierta (m²)"
+    />
+    
+    <input
+      type="number"
+      value={formData.lotSize || ""}
+      placeholder="Tamaño del terreno (m²)"
+    />
+    
+    {/* Rooms */}
+    <input
+      type="number"
+      value={formData.rooms || ""}
+      placeholder="Ambientes"
+    />
+    
+    <input
+      type="number"
+      value={formData.bedrooms || ""}
+      placeholder="Dormitorios"
+    />
+    
+    <input
+      type="number"
+      value={formData.bathrooms || ""}
+      placeholder="Baños"
+    />
+    
+    <input
+      type="number"
+      value={formData.garageSpaces || ""}
+      placeholder="Cocheras"
+    />
+    ```
+  </Tab>
+  
+  <Tab title="Features">
+    ```tsx
+    {/* Boolean Features */}
+    <div className="grid grid-cols-2 gap-4">
+      <label className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          checked={formData.hasBalcony}
+          onChange={(e) => handleInputChange(
+            "hasBalcony", 
+            e.target.checked
+          )}
+        />
+        <span>Balcón</span>
+      </label>
+      
+      <label className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          checked={formData.hasTerrace}
+          onChange={(e) => handleInputChange(
+            "hasTerrace", 
+            e.target.checked
+          )}
+        />
+        <span>Terraza</span>
+      </label>
+      
+      <label className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          checked={formData.hasGarden}
+          onChange={(e) => handleInputChange(
+            "hasGarden", 
+            e.target.checked
+          )}
+        />
+        <span>Jardín</span>
+      </label>
+      
+      <label className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          checked={formData.petsAllowed}
+          onChange={(e) => handleInputChange(
+            "petsAllowed", 
+            e.target.checked
+          )}
+        />
+        <span>Acepta mascotas</span>
+      </label>
+    </div>
+    
+    {/* Custom Characteristics */}
+    <div className="mt-4">
+      <input
+        type="text"
+        value={formData.customCharacteristicInput}
+        onChange={(e) => handleInputChange(
+          "customCharacteristicInput", 
+          e.target.value
+        )}
+        onKeyDown={handleCustomCharacteristicKeyDown}
+        placeholder="Agregar característica personalizada"
+      />
+      
+      {/* Display custom features */}
+      <div className="flex flex-wrap gap-2 mt-2">
+        {getCustomFeatures().map((feature) => (
+          <span
+            key={feature}
+            className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100"
+          >
+            {feature}
+            <button
+              onClick={() => handleRemoveCustomCharacteristic(feature)}
+              className="ml-2"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+    </div>
+    ```
+  </Tab>
+</Tabs>
+
+## Image Management
+
+Robust image upload and management system with drag-and-drop ordering.
+
+### Upload Images
+
+<Steps>
+
+<Step title="Select Images">
+Users can select multiple images at once.
+
+```tsx Image Selection
+const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const files = Array.from(e.target.files || []);
+  const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+  
+  // Validate file size (max 20MB)
+  const tooLarge = imageFiles.find((f) => f.size > 20 * 1024 * 1024);
+  if (tooLarge) {
+    setErrors({ images: "Cada archivo debe ser menor a 20MB" });
+    return;
+  }
+  
+  // Limit to 20 new images
+  const combinedCount = selectedFiles.length + imageFiles.length;
+  if (combinedCount > MAX_NEW_IMAGES) {
+    setErrors({ images: `Máximo ${MAX_NEW_IMAGES} imágenes nuevas` });
+    return;
+  }
+  
+  // Create preview URLs
+  const newPreviews = imageFiles.map((file) => URL.createObjectURL(file));
+  setSelectedFiles((prev) => [...prev, ...imageFiles]);
+  setSelectedPreviews((prev) => [...prev, ...newPreviews]);
+};
+```
+</Step>
+
+<Step title="Preview Images">
+Show thumbnails of selected images with controls.
+
+```tsx Image Previews
+<div className="grid grid-cols-3 gap-4">
+  {selectedPreviews.map((preview, index) => (
+    <div key={index} className="relative group">
+      <img
+        src={preview}
+        alt={`Preview ${index + 1}`}
+        className="w-full h-32 object-cover rounded-lg"
+        style={{
+          transform: `rotate(${getRotationAngle(
+            newImageRotations[index] || 0
+          )}deg)`,
+        }}
+      />
+      
+      {/* Rotate button */}
+      <button
+        onClick={() => handleRotateNewImage(index)}
+        className="absolute top-2 left-2 p-1 bg-white rounded-full"
+      >
+        <RotateCw className="h-4 w-4" />
+      </button>
+      
+      {/* Set as main button */}
+      <button
+        onClick={() => handleSetMainNewImage(index)}
+        className={`absolute top-2 right-2 p-1 rounded-full ${
+          mainNewImageIndex === index 
+            ? 'bg-yellow-500' 
+            : 'bg-white'
+        }`}
+      >
+        <Star className="h-4 w-4" />
+      </button>
+      
+      {/* Remove button */}
+      <button
+        onClick={() => handleRemoveSelectedFile(index)}
+        className="absolute bottom-2 right-2 p-1 bg-red-500 text-white rounded-full"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  ))}
+</div>
+```
+</Step>
+
+<Step title="Drag and Drop Ordering">
+Reorder images using drag-and-drop (existing images only).
+
+```tsx Drag and Drop
+import { DndContext, closestCenter } from "@dnd-kit/core";
+import { arrayMove, SortableContext, useSortable } from "@dnd-kit/sortable";
+
+const handleDragEnd = (event: DragEndEvent) => {
+  const { active, over } = event;
+
+  if (active.id !== over?.id) {
+    setExistingImagesMeta((items) => {
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over?.id);
+
+      const reorderedItems = arrayMove(items, oldIndex, newIndex);
+
+      // Update order index and set main image
+      return reorderedItems.map((item, index) => ({
+        ...item,
+        orderIndex: index,
+        isMain: index === 0, // First image is always main
+      }));
+    });
+  }
+};
+
+<DndContext
+  sensors={sensors}
+  collisionDetection={closestCenter}
+  onDragEnd={handleDragEnd}
+>
+  <SortableContext items={existingImagesMeta.map((img) => img.id)}>
+    {existingImagesMeta.map((img) => (
+      <DraggableImageItem key={img.id} image={img} />
+    ))}
+  </SortableContext>
+</DndContext>
+```
+</Step>
+
+</Steps>
+
+## Location Management
+
+Interactive map and address autocomplete for precise property location.
+
+### Address Autocomplete
+
+```tsx Address Autocomplete
+import AddressAutocomplete from "../components/AddressAutocomplete";
+
+<AddressAutocomplete
+  value={formData.street}
+  onChange={(address) => {
+    // Update form with address components
+    handleInputChange("street", address.street);
+    handleInputChange("streetNumber", address.streetNumber);
+    handleInputChange("city", address.city);
+    handleInputChange("province", address.province);
+    handleInputChange("postalCode", address.postalCode);
+    handleInputChange("latitude", address.latitude);
+    handleInputChange("longitude", address.longitude);
+  }}
+  placeholder="Ingrese dirección"
+/>
+```
+
+### Interactive Map
+
+```tsx Draggable Map Pin
+import { DraggablePropertyMap } from "../components/PropertyMap";
+
+const handleMapLocationChange = (latitude: number, longitude: number) => {
+  handleInputChange("latitude", latitude);
+  handleInputChange("longitude", longitude);
+  setCoordinatesManuallyAdjusted(true);
+};
+
+<DraggablePropertyMap
+  latitude={formData.latitude}
+  longitude={formData.longitude}
+  onLocationChange={handleMapLocationChange}
+  title={formData.title}
+/>
+```
+
+## Form Submission
+
+Handle property creation and updates with multipart form data.
+
+<CodeGroup>
+
+```tsx Create Property
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!validateForm()) return;
+
+  setLoading(true);
+  try {
+    const fd = new FormData();
+    
+    // Basic fields
+    fd.append("title", formData.title);
+    fd.append("description", formData.description);
+    fd.append("price", String(formData.price));
+    fd.append("propertyTypeId", String(formData.propertyTypeId));
+    fd.append("operationTypeId", String(formData.operationTypeId));
+    fd.append("statusId", String(formData.statusId));
+    
+    // Numeric fields
+    if (formData.surfaceCovered != null)
+      fd.append("surfaceCoveredM2", String(formData.surfaceCovered));
+    if (formData.bedrooms != null)
+      fd.append("bedrooms", String(formData.bedrooms));
+    if (formData.bathrooms != null)
+      fd.append("bathrooms", String(formData.bathrooms));
+    
+    // Boolean features
+    fd.append("hasBalcony", String(formData.hasBalcony));
+    fd.append("hasTerrace", String(formData.hasTerrace));
+    fd.append("hasGarden", String(formData.hasGarden));
+    fd.append("petsAllowed", String(formData.petsAllowed));
+    
+    // Location
+    fd.append("location", JSON.stringify({
+      street: formData.street,
+      streetNumber: formData.streetNumber,
+      city: formData.city,
+      province: formData.province,
+      postalCode: formData.postalCode,
+      country: formData.country,
+      latitude: formData.latitude,
+      longitude: formData.longitude,
+    }));
+    
+    // Images
+    selectedFiles.forEach((file, index) => {
+      fd.append("images", file);
+      if (mainNewImageIndex === index) {
+        fd.append("mainNewImageIndex", String(index));
+      }
+    });
+    
+    // Image rotations
+    if (newImageRotations.length > 0) {
+      fd.append("newImageRotations", JSON.stringify(newImageRotations));
+    }
+    
+    // YouTube video
+    fd.append("youtubeVideoUrl", formData.youtubeVideoUrl || "");
+    
+    // Features and tags
+    if (formData.features?.length)
+      fd.append("features", JSON.stringify(formData.features));
+    if (formData.tags?.length)
+      fd.append("tags", JSON.stringify(formData.tags));
+    
+    await api.properties.create(fd);
+    
+    navigate({ to: "/admin" });
+  } catch (error) {
+    setErrors({ submit: "Error al guardar la propiedad" });
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+```tsx Update Property
+// For updates, include image management
+if (isEditing && propertyId) {
+  // Mark images for deletion
+  if (imagesMarkedForDeletion.size > 0) {
+    fd.append(
+      "imagesToDelete",
+      JSON.stringify(Array.from(imagesMarkedForDeletion))
+    );
+  }
+
+  // Send updated images metadata
+  if (existingImagesMeta.length > 0) {
+    fd.append("imagesMeta", JSON.stringify(existingImagesMeta));
+  }
+
+  // Send existing image rotations
+  if (existingImageRotations.size > 0) {
+    const rotationsObj = Object.fromEntries(existingImageRotations);
+    fd.append("existingImageRotations", JSON.stringify(rotationsObj));
+  }
+
+  const response = await api.properties.update(propertyId, fd);
+  
+  navigate({ to: "/admin" });
+}
+```
+
+</CodeGroup>
+
+## Form Validation
+
+Validate required fields before submission.
+
+```typescript Form Validation
+const validateForm = () => {
+  const newErrors: Record<string, string> = {};
+
+  if (!formData.title.trim())
+    newErrors.title = "El título es requerido";
+  
+  if (!formData.description.trim())
+    newErrors.description = "La descripción es requerida";
+  
+  if (!formData.price || formData.price <= 0)
+    newErrors.price = "El precio debe ser mayor a 0";
+  
+  if (!formData.street.trim())
+    newErrors.street = "La dirección es requerida";
+  
+  if (!formData.city.trim())
+    newErrors.city = "La ciudad es requerida";
+  
+  if (!formData.province.trim())
+    newErrors.province = "La provincia es requerida";
+  
+  if (!formData.status)
+    newErrors.status = "El estado es requerido";
+
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
+```
+
+## Metadata Loading
+
+Load property types, operation types, and other metadata for dropdowns.
+
+```tsx Load Metadata
+const [metadata, setMetadata] = useState<{
+  propertyTypes: Array<{ id: number; name: string }>;
+  operationTypes: Array<{ id: number; name: string }>;
+  propertyStatuses: Array<{ id: number; name: string }>;
+  conditions: Array<{ id: number; name: string }>;
+  currencies: Array<{ id: number; code: string }>;
+} | null>(null);
+
+useEffect(() => {
+  const loadMetadata = async () => {
+    try {
+      setLoadingMetadata(true);
+      const [
+        propertyTypesRes,
+        operationTypesRes,
+        propertyStatusesRes,
+        conditionsRes,
+        currenciesRes,
+      ] = await Promise.all([
+        api.metadata.getPropertyTypes(),
+        api.metadata.getOperationTypes(),
+        api.metadata.getPropertyStatuses(),
+        api.metadata.getConditions(),
+        api.metadata.getCurrencies(),
+      ]);
+
+      setMetadata({
+        propertyTypes: propertyTypesRes.data || [],
+        operationTypes: operationTypesRes.data || [],
+        propertyStatuses: propertyStatusesRes.data || [],
+        conditions: conditionsRes.data || [],
+        currencies: currenciesRes.data || [],
+      });
+    } catch (error) {
+      console.error("Error loading metadata:", error);
+    } finally {
+      setLoadingMetadata(false);
+    }
+  };
+
+  loadMetadata();
+}, []);
+```
+
+## Property Subtypes
+
+Dynamic subtype loading based on selected property type.
+
+```tsx Dynamic Subtypes
+const [propertySubtypes, setPropertySubtypes] = useState<
+  Array<{ id: number; name: string; type_id: number }>
+>([]);
+
+const loadPropertySubtypes = async (propertyTypeId: number) => {
+  try {
+    setLoadingSubtypes(true);
+    const response = await api.metadata.getPropertySubtypes(propertyTypeId);
+    setPropertySubtypes(response.data || []);
+  } catch (error) {
+    console.error("Error loading property subtypes:", error);
+    setPropertySubtypes([]);
+  } finally {
+    setLoadingSubtypes(false);
+  }
+};
+
+// Load subtypes when property type changes
+useEffect(() => {
+  if (formData.propertyTypeId) {
+    loadPropertySubtypes(formData.propertyTypeId);
+  } else {
+    setPropertySubtypes([]);
+    setFormData((prev) => ({
+      ...prev,
+      propertySubtype: undefined,
+      propertySubtypeId: undefined,
+    }));
+  }
+}, [formData.propertyTypeId]);
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Image Optimization">
+    - Validate file sizes (max 20MB per image)
+    - Limit number of images (20 max)
+    - Compress images before upload
+    - Use WebP format when possible
+    - Generate thumbnails on backend
+  </Accordion>
+
+  <Accordion title="Form UX">
+    - Show loading states during submission
+    - Provide clear error messages
+    - Auto-save drafts periodically
+    - Preserve form data on navigation
+    - Use optimistic UI updates
+  </Accordion>
+
+  <Accordion title="Validation">
+    - Validate on blur and submit
+    - Clear errors as user types
+    - Highlight invalid fields
+    - Provide helpful validation messages
+    - Prevent duplicate submissions
+  </Accordion>
+
+  <Accordion title="Performance">
+    - Lazy load metadata
+    - Debounce address autocomplete
+    - Use virtualized lists for large datasets
+    - Optimize image previews
+    - Cache metadata locally
+  </Accordion>
+</AccordionGroup>
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="Property Listings" icon="list" href="/features/property-listings">
+    View and browse created properties
+  </Card>
+  <Card title="User Authentication" icon="user" href="/features/user-authentication">
+    Admin authentication required
+  </Card>
+</CardGroup>

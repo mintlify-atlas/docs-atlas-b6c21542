@@ -1,0 +1,499 @@
+---
+title: Google Maps Integration
+description: Guide to implementing Google Maps functionality with the Maps JavaScript API and Leaflet fallback
+---
+
+## Overview
+
+The application integrates Google Maps for displaying property locations, interactive maps, and address autocomplete. The implementation uses the `@googlemaps/js-api-loader` package with Leaflet as a fallback option.
+
+## Installation
+
+<Steps>
+  <Step title="Install Dependencies">
+    Install the required packages:
+
+    ```bash
+    npm install @googlemaps/js-api-loader
+    npm install @types/google.maps
+    npm install leaflet @types/leaflet react-leaflet
+    ```
+  </Step>
+
+  <Step title="Configure API Key">
+    Add your Google Maps API key to environment variables:
+
+    ```bash
+    VITE_GOOGLE_MAPS_API_KEY=your_api_key_here
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Never commit your API key to version control. Always use environment variables and add `.env` files to `.gitignore`.
+</Warning>
+
+## Google Maps Loader
+
+The application uses a centralized loader utility to ensure the Google Maps API is loaded only once and shared across components.
+
+### Loader Implementation
+
+```typescript src/lib/googleMaps.ts
+let googlePromise: Promise<any> | null = null;
+
+export const ensureGoogleMaps = (): Promise<any> => {
+  if (googlePromise) return googlePromise;
+
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+  if (!apiKey) {
+    console.error("VITE_GOOGLE_MAPS_API_KEY is not set");
+    return Promise.reject(new Error("Missing Google Maps API key"));
+  }
+
+  googlePromise = (async () => {
+    const { Loader } = await import("@googlemaps/js-api-loader");
+    const loader = new Loader({
+      apiKey,
+      version: "weekly",
+      libraries: ["places"],
+    });
+    await loader.load();
+    return (window as unknown as { google: any }).google;
+  })();
+
+  return googlePromise;
+};
+```
+
+<Note>
+  The loader uses a singleton pattern to prevent multiple API loads. The `googlePromise` is cached and reused across all components.
+</Note>
+
+### Key Features
+
+- **Singleton Pattern**: Ensures Google Maps API loads only once
+- **Places Library**: Includes the Places API for autocomplete functionality
+- **Error Handling**: Validates API key presence and handles load failures
+- **Type Safety**: TypeScript types for Google Maps objects
+
+## Property Map Component
+
+The `PropertyMap` component displays a static map with a marker for property locations.
+
+### Basic Usage
+
+```tsx
+import PropertyMap from "./components/PropertyMap";
+
+function PropertyDetail() {
+  return (
+    <PropertyMap
+      latitude={-34.603722}
+      longitude={-58.381592}
+      title="Beautiful Apartment"
+      height="400px"
+      zoom={15}
+    />
+  );
+}
+```
+
+### Component Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `latitude` | `number` | Required | Property latitude coordinate |
+| `longitude` | `number` | Required | Property longitude coordinate |
+| `title` | `string` | `"Ubicación de la propiedad"` | Marker title (tooltip) |
+| `className` | `string` | `""` | Additional CSS classes |
+| `height` | `string` | `"400px"` | Map container height |
+| `zoom` | `number` | `15` | Initial zoom level |
+
+### Implementation Details
+
+```tsx src/components/PropertyMap.tsx
+const PropertyMap = ({
+  latitude,
+  longitude,
+  title = "Ubicación de la propiedad",
+  className = "",
+  height = "400px",
+  zoom = 15,
+}: PropertyMapProps) => {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<GoogleMapInstance | null>(null);
+  const markerRef = useRef<GoogleMarkerInstance | null>(null);
+
+  useEffect(() => {
+    if (!mapRef.current || !latitude || !longitude) return;
+
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      console.error("VITE_GOOGLE_MAPS_API_KEY is not set");
+      return;
+    }
+
+    let isCancelled = false;
+
+    loadGoogleMapsApi(apiKey)
+      .then((google) => {
+        if (isCancelled || !mapRef.current) return;
+        
+        const map = new google.maps.Map(mapRef.current, {
+          center: { lat: latitude, lng: longitude },
+          zoom,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+          gestureHandling: "greedy",
+        });
+        mapInstanceRef.current = map;
+
+        const marker = new google.maps.Marker({
+          position: { lat: latitude, lng: longitude },
+          map,
+          title,
+        });
+        markerRef.current = marker;
+      })
+      .catch((err) => {
+        console.error("Error loading Google Maps:", err);
+      });
+
+    return () => {
+      isCancelled = true;
+      if (markerRef.current) {
+        markerRef.current.setMap(null);
+        markerRef.current = null;
+      }
+      mapInstanceRef.current = null;
+    };
+  }, [latitude, longitude, title, zoom]);
+
+  return (
+    <div
+      ref={mapRef}
+      className={`rounded-lg overflow-hidden border border-gray-300 ${className}`}
+      style={{ height }}
+      tabIndex={0}
+      aria-label={`Mapa mostrando la ubicación de ${title}`}
+    />
+  );
+};
+```
+
+<Note>
+  The component includes proper cleanup in the `useEffect` return function to prevent memory leaks when the component unmounts.
+</Note>
+
+## Draggable Property Map
+
+For property creation and editing forms, use the `DraggablePropertyMap` component that allows users to adjust the marker position.
+
+### Usage
+
+```tsx
+import { DraggablePropertyMap } from "./components/PropertyMap";
+import { useState } from "react";
+
+function PropertyForm() {
+  const [latitude, setLatitude] = useState(-34.603722);
+  const [longitude, setLongitude] = useState(-58.381592);
+
+  const handleLocationChange = (lat: number, lng: number) => {
+    setLatitude(lat);
+    setLongitude(lng);
+    console.log("New location:", lat, lng);
+  };
+
+  return (
+    <DraggablePropertyMap
+      latitude={latitude}
+      longitude={longitude}
+      onLocationChange={handleLocationChange}
+      draggable={true}
+      height="500px"
+      zoom={16}
+    />
+  );
+}
+```
+
+### Additional Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `onLocationChange` | `(lat: number, lng: number) => void` | - | Callback when marker is dragged |
+| `draggable` | `boolean` | `true` | Enable/disable marker dragging |
+
+### Drag Event Implementation
+
+```tsx
+const marker = new google.maps.Marker({
+  position: { lat: latitude, lng: longitude },
+  map,
+  title,
+  draggable, // Enable dragging
+});
+
+// Add drag event listener
+if (onLocationChange && draggable) {
+  marker.addListener("dragend", () => {
+    const position = marker.getPosition();
+    if (position) {
+      onLocationChange(position.lat(), position.lng());
+    }
+  });
+}
+```
+
+## Map Configuration Options
+
+Customize map behavior with Google Maps options:
+
+```tsx
+const map = new google.maps.Map(mapRef.current, {
+  center: { lat: latitude, lng: longitude },
+  zoom: 15,
+  // Disable default controls
+  mapTypeControl: false,
+  streetViewControl: false,
+  // Enable fullscreen
+  fullscreenControl: true,
+  // Smooth gesture handling
+  gestureHandling: "greedy",
+  // Custom styles
+  styles: [
+    {
+      featureType: "poi",
+      elementType: "labels",
+      stylers: [{ visibility: "off" }]
+    }
+  ]
+});
+```
+
+### Common Configuration Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `zoom` | `number` | Initial zoom level (0-22) |
+| `center` | `{ lat: number, lng: number }` | Map center coordinates |
+| `mapTypeControl` | `boolean` | Show map type selector |
+| `streetViewControl` | `boolean` | Show Street View control |
+| `fullscreenControl` | `boolean` | Show fullscreen button |
+| `gestureHandling` | `"cooperative" \| "greedy" \| "none"` | Touch/scroll behavior |
+| `styles` | `MapTypeStyle[]` | Custom map styling |
+
+## Address Autocomplete
+
+Implement address autocomplete using the Places API:
+
+```tsx
+import { useEffect, useRef } from "react";
+import { ensureGoogleMaps } from "../lib/googleMaps";
+
+function AddressAutocomplete({ onPlaceSelect }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!inputRef.current) return;
+
+    ensureGoogleMaps().then((google) => {
+      const autocomplete = new google.maps.places.Autocomplete(
+        inputRef.current,
+        {
+          types: ["address"],
+          componentRestrictions: { country: "ar" }, // Argentina only
+        }
+      );
+
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        
+        if (place.geometry?.location) {
+          onPlaceSelect({
+            address: place.formatted_address,
+            latitude: place.geometry.location.lat(),
+            longitude: place.geometry.location.lng(),
+          });
+        }
+      });
+    });
+  }, [onPlaceSelect]);
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      placeholder="Search address..."
+      className="form-input"
+    />
+  );
+}
+```
+
+### Autocomplete Options
+
+```tsx
+const autocomplete = new google.maps.places.Autocomplete(input, {
+  types: ["address"],           // Filter to addresses only
+  componentRestrictions: { 
+    country: "ar"                // Restrict to Argentina
+  },
+  fields: [                      // Limit returned fields
+    "formatted_address",
+    "geometry",
+    "name"
+  ]
+});
+```
+
+## Leaflet Integration
+
+For fallback scenarios or offline capabilities, the application includes Leaflet:
+
+```tsx
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+
+function LeafletMap({ latitude, longitude }) {
+  return (
+    <MapContainer
+      center={[latitude, longitude]}
+      zoom={15}
+      style={{ height: "400px", width: "100%" }}
+    >
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
+      />
+      <Marker position={[latitude, longitude]}>
+        <Popup>Property Location</Popup>
+      </Marker>
+    </MapContainer>
+  );
+}
+```
+
+## Error Handling
+
+Handle API load failures gracefully:
+
+```tsx
+const [mapError, setMapError] = useState<string | null>(null);
+
+useEffect(() => {
+  loadGoogleMapsApi(apiKey)
+    .then((google) => {
+      // Initialize map
+    })
+    .catch((err) => {
+      console.error("Error loading Google Maps:", err);
+      setMapError("Failed to load map. Please refresh the page.");
+    });
+}, []);
+
+if (mapError) {
+  return (
+    <div className="map-error">
+      <p>{mapError}</p>
+      <button onClick={() => window.location.reload()}>
+        Retry
+      </button>
+    </div>
+  );
+}
+```
+
+## Performance Optimization
+
+<Steps>
+  <Step title="Lazy Loading">
+    Load Google Maps API only when needed:
+
+    ```tsx
+    const [shouldLoadMap, setShouldLoadMap] = useState(false);
+
+    // Load map when component is visible
+    useEffect(() => {
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          setShouldLoadMap(true);
+        }
+      });
+      observer.observe(mapContainerRef.current);
+    }, []);
+    ```
+  </Step>
+
+  <Step title="Debounce Updates">
+    Debounce location updates in draggable maps:
+
+    ```tsx
+    const debouncedLocationChange = useMemo(
+      () => debounce((lat, lng) => {
+        onLocationChange(lat, lng);
+      }, 300),
+      [onLocationChange]
+    );
+    ```
+  </Step>
+
+  <Step title="Cleanup Resources">
+    Always clean up map instances and event listeners:
+
+    ```tsx
+    return () => {
+      if (markerRef.current) {
+        markerRef.current.setMap(null);
+      }
+      if (autocompleteRef.current) {
+        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      }
+    };
+    ```
+  </Step>
+</Steps>
+
+## Best Practices
+
+<Note>
+  - Load the API only once using the singleton pattern
+  - Always validate API key presence before loading
+  - Implement proper error handling and fallbacks
+  - Clean up resources in `useEffect` return functions
+  - Use `gestureHandling: "greedy"` for better mobile UX
+  - Limit Places API fields to reduce costs
+  - Consider lazy loading maps for performance
+</Note>
+
+## Troubleshooting
+
+### API Key Issues
+
+If maps fail to load:
+
+1. Verify API key is set in environment variables
+2. Check API key restrictions in Google Cloud Console
+3. Ensure Maps JavaScript API is enabled
+4. Verify billing is set up (required for Google Maps)
+
+### TypeScript Errors
+
+Install type definitions:
+
+```bash
+npm install --save-dev @types/google.maps
+```
+
+### Marker Not Visible
+
+Ensure coordinates are valid:
+
+```tsx
+if (!latitude || !longitude) {
+  return <div>Invalid coordinates</div>;
+}
+```

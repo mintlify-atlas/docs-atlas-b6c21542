@@ -1,0 +1,590 @@
+---
+title: Metadata API
+description: Endpoints for retrieving property metadata including types, features, tags, and reference data
+---
+
+## Overview
+
+The Metadata API provides reference data for property listings. These endpoints return configuration values for property types, operation types, features, tags, and other categorical data used throughout the application.
+
+**Base Path:** `/api/metadata`
+
+<Note>
+All metadata endpoints are public and do not require authentication.
+</Note>
+
+---
+
+## Get All Metadata
+
+<CodeGroup>
+```typescript GET /metadata/all
+const response = await api.metadata.getAll();
+```
+</CodeGroup>
+
+Retrieve all metadata in a single request. This is the most efficient way to load all reference data at application startup.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="Metadata" required>
+  Complete metadata object containing all reference data
+  
+  <Expandable title="Metadata structure">
+    <ResponseField name="propertyTypes" type="PropertyType[]">
+      All available property types
+    </ResponseField>
+    
+    <ResponseField name="propertySubtypes" type="PropertySubtype[]">
+      All property subtypes
+    </ResponseField>
+    
+    <ResponseField name="operationTypes" type="OperationType[]">
+      All operation types (venta, alquiler, etc.)
+    </ResponseField>
+    
+    <ResponseField name="propertyStatuses" type="PropertyStatus[]">
+      All property statuses
+    </ResponseField>
+    
+    <ResponseField name="currencies" type="Currency[]">
+      Available currencies
+    </ResponseField>
+    
+    <ResponseField name="features" type="Feature[]">
+      Available property features
+    </ResponseField>
+    
+    <ResponseField name="tags" type="Tag[]">
+      Available property tags
+    </ResponseField>
+    
+    <ResponseField name="conditions" type="Condition[]">
+      Property condition options
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Usage Example
+
+From `src/components/FilterSidebar.tsx:39`:
+
+```typescript
+const response = await api.metadata.getAll();
+setMetadata(response.data);
+```
+
+---
+
+## Get Property Types
+
+<CodeGroup>
+```typescript GET /metadata/property-types
+const response = await api.metadata.getPropertyTypes();
+```
+</CodeGroup>
+
+Retrieve all available property types.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="PropertyType[]" required>
+  Array of property type objects
+  
+  <Expandable title="PropertyType structure">
+    <ResponseField name="id" type="number">
+      Unique property type identifier
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Display name (Casa, Departamento, PH, Terreno, etc.)
+    </ResponseField>
+    
+    <ResponseField name="slug" type="string">
+      URL-friendly slug
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "name": "Casa", "slug": "casa" },
+    { "id": 2, "name": "Departamento", "slug": "departamento" },
+    { "id": 3, "name": "PH", "slug": "ph" },
+    { "id": 4, "name": "Terreno", "slug": "terreno" },
+    { "id": 5, "name": "Local comercial", "slug": "local" },
+    { "id": 6, "name": "Galpón", "slug": "galpon" },
+    { "id": 7, "name": "Oficina comercial", "slug": "oficina" },
+    { "id": 8, "name": "Campo", "slug": "campo" },
+    { "id": 9, "name": "Depósito", "slug": "deposito" },
+    { "id": 10, "name": "Bodega", "slug": "bodega" },
+    { "id": 11, "name": "Consultorio", "slug": "consultorio" },
+    { "id": 12, "name": "Fondo de comercio", "slug": "fondo-comercio" },
+    { "id": 13, "name": "Hotel", "slug": "hotel" },
+    { "id": 14, "name": "Cochera", "slug": "cochera" }
+  ]
+}
+```
+
+---
+
+## Get Property Subtypes
+
+<CodeGroup>
+```typescript GET /metadata/property-subtypes
+// Get all subtypes
+const response = await api.metadata.getPropertySubtypes();
+
+// Get subtypes for a specific property type
+const response = await api.metadata.getPropertySubtypes(1);
+```
+</CodeGroup>
+
+Retrieve property subtypes, optionally filtered by property type.
+
+### Query Parameters
+
+<ParamField query="propertyTypeId" type="number">
+  Filter subtypes by property type ID
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="PropertySubtype[]" required>
+  Array of property subtype objects
+  
+  <Expandable title="PropertySubtype structure">
+    <ResponseField name="id" type="number">
+      Unique subtype identifier
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Display name
+    </ResponseField>
+    
+    <ResponseField name="slug" type="string">
+      URL-friendly slug
+    </ResponseField>
+    
+    <ResponseField name="typeId" type="number">
+      Parent property type ID
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "Casa en barrio cerrado",
+      "slug": "casa-barrio-cerrado",
+      "typeId": 1
+    },
+    {
+      "id": 2,
+      "name": "Casa en country",
+      "slug": "casa-country",
+      "typeId": 1
+    }
+  ]
+}
+```
+
+### Usage Example
+
+From `src/pages/PropertyFormPage.tsx:282`:
+
+```typescript
+const response = await api.metadata.getPropertySubtypes(propertyTypeId);
+setPropertySubtypes(response.data);
+```
+
+---
+
+## Get Operation Types
+
+<CodeGroup>
+```typescript GET /metadata/operation-types
+const response = await api.metadata.getOperationTypes();
+```
+</CodeGroup>
+
+Retrieve all available operation types (venta, alquiler, etc.).
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="OperationType[]" required>
+  Array of operation type objects
+  
+  <Expandable title="OperationType structure">
+    <ResponseField name="id" type="number">
+      Unique operation type identifier
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Display name
+    </ResponseField>
+    
+    <ResponseField name="slug" type="string">
+      URL-friendly slug
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "name": "Venta", "slug": "venta" },
+    { "id": 2, "name": "Alquiler", "slug": "alquiler" },
+    { "id": 3, "name": "Alquiler temporal", "slug": "alquiler-temporal" },
+    { "id": 4, "name": "Permuta", "slug": "permuta" }
+  ]
+}
+```
+
+---
+
+## Get Property Statuses
+
+<CodeGroup>
+```typescript GET /metadata/property-statuses
+const response = await api.metadata.getPropertyStatuses();
+```
+</CodeGroup>
+
+Retrieve all available property statuses.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="PropertyStatus[]" required>
+  Array of property status objects
+  
+  <Expandable title="PropertyStatus structure">
+    <ResponseField name="id" type="number">
+      Unique status identifier
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Display name
+    </ResponseField>
+    
+    <ResponseField name="slug" type="string">
+      URL-friendly slug
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "name": "Activo", "slug": "activo" },
+    { "id": 2, "name": "Pendiente", "slug": "pendiente" },
+    { "id": 3, "name": "Vendido", "slug": "vendido" },
+    { "id": 4, "name": "Alquilado", "slug": "alquilado" },
+    { "id": 5, "name": "Pausado", "slug": "pausado" }
+  ]
+}
+```
+
+---
+
+## Get Currencies
+
+<CodeGroup>
+```typescript GET /metadata/currencies
+const response = await api.metadata.getCurrencies();
+```
+</CodeGroup>
+
+Retrieve all available currencies.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="Currency[]" required>
+  Array of currency objects
+  
+  <Expandable title="Currency structure">
+    <ResponseField name="id" type="number">
+      Unique currency identifier
+    </ResponseField>
+    
+    <ResponseField name="code" type="string">
+      ISO 4217 currency code (ARS, USD, EUR)
+    </ResponseField>
+    
+    <ResponseField name="symbol" type="string">
+      Currency symbol ($, US$, €)
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Full currency name
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "code": "ARS",
+      "symbol": "$",
+      "name": "Peso Argentino"
+    },
+    {
+      "id": 2,
+      "code": "USD",
+      "symbol": "US$",
+      "name": "Dólar Estadounidense"
+    },
+    {
+      "id": 3,
+      "code": "EUR",
+      "symbol": "€",
+      "name": "Euro"
+    }
+  ]
+}
+```
+
+---
+
+## Get Features
+
+<CodeGroup>
+```typescript GET /metadata/features
+const response = await api.metadata.getFeatures();
+```
+</CodeGroup>
+
+Retrieve all available property features.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="Feature[]" required>
+  Array of feature objects
+  
+  <Expandable title="Feature structure">
+    <ResponseField name="id" type="number">
+      Unique feature identifier
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Feature display name
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "name": "Parrilla" },
+    { "id": 2, "name": "Pileta" },
+    { "id": 3, "name": "Aire acondicionado" },
+    { "id": 4, "name": "SUM" },
+    { "id": 5, "name": "Gimnasio" },
+    { "id": 6, "name": "Seguridad 24hs" },
+    { "id": 7, "name": "Ascensor" },
+    { "id": 8, "name": "Balcón" },
+    { "id": 9, "name": "Terraza" },
+    { "id": 10, "name": "Jardín" },
+    { "id": 11, "name": "Cochera" },
+    { "id": 12, "name": "Lavadero" },
+    { "id": 13, "name": "Internet" },
+    { "id": 14, "name": "Electricidad" }
+  ]
+}
+```
+
+---
+
+## Get Tags
+
+<CodeGroup>
+```typescript GET /metadata/tags
+const response = await api.metadata.getTags();
+```
+</CodeGroup>
+
+Retrieve all available property tags.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="Tag[]" required>
+  Array of tag objects
+  
+  <Expandable title="Tag structure">
+    <ResponseField name="id" type="number">
+      Unique tag identifier
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Tag display name
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "name": "Oportunidad" },
+    { "id": 2, "name": "Crédito hipotecario" },
+    { "id": 3, "name": "Apto profesional" },
+    { "id": 4, "name": "Acepta permuta" },
+    { "id": 5, "name": "Apto crédito" },
+    { "id": 6, "name": "Amoblado" },
+    { "id": 7, "name": "Acepta mascotas" },
+    { "id": 8, "name": "Dueño directo" }
+  ]
+}
+```
+
+---
+
+## Get Conditions
+
+<CodeGroup>
+```typescript GET /metadata/conditions
+const response = await api.metadata.getConditions();
+```
+</CodeGroup>
+
+Retrieve all available property conditions.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="Condition[]" required>
+  Array of condition objects
+  
+  <Expandable title="Condition structure">
+    <ResponseField name="id" type="number">
+      Unique condition identifier
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Condition display name
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "name": "A estrenar" },
+    { "id": 2, "name": "Bueno" },
+    { "id": 3, "name": "Muy bueno" },
+    { "id": 4, "name": "Excelente" },
+    { "id": 5, "name": "Reciclado" },
+    { "id": 6, "name": "Para refaccionar" }
+  ]
+}
+```
+
+---
+
+## Usage Best Practices
+
+### Cache Metadata
+
+Metadata rarely changes. Load it once at application startup and cache it:
+
+```typescript
+// Load all metadata at startup
+const metadata = await api.metadata.getAll();
+localStorage.setItem('metadata', JSON.stringify(metadata.data));
+
+// Use cached data
+const cachedMetadata = JSON.parse(localStorage.getItem('metadata'));
+```
+
+### Load on Demand
+
+For specific forms, load only needed metadata:
+
+```typescript
+const [propertyTypes, operationTypes, conditions] = await Promise.all([
+  api.metadata.getPropertyTypes(),
+  api.metadata.getOperationTypes(),
+  api.metadata.getConditions()
+]);
+```
+
+### Dynamic Subtype Loading
+
+Load subtypes when user selects a property type:
+
+```typescript
+const handlePropertyTypeChange = async (propertyTypeId: number) => {
+  const response = await api.metadata.getPropertySubtypes(propertyTypeId);
+  setAvailableSubtypes(response.data);
+};
+```
+
+---
+
+## Related Documentation
+
+- [Properties API](/api/properties) - Use metadata IDs when creating/updating properties
+- [Admin API](/api/admin) - Administrative operations

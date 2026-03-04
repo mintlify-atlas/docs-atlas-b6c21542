@@ -1,0 +1,449 @@
+---
+title: Creating and Managing Listings
+description: Complete guide to creating, editing, and managing property listings on Inmobiliaria Web
+---
+
+# Creating and Managing Listings
+
+Learn how to create professional property listings with photos, detailed information, and all the features buyers and renters need to make informed decisions.
+
+## Getting Started
+
+To create property listings, you need admin access. Once authenticated, you can access the property management tools.
+
+<Steps>
+  <Step title="Access Admin Panel">
+    Navigate to the Admin Panel by clicking "Panel de Administración" in the navigation menu.
+  </Step>
+  
+  <Step title="Click Add Property">
+    Click the "Agregar Propiedad" button in the top-right corner of the admin panel.
+  </Step>
+  
+  <Step title="Fill Out Property Form">
+    Complete all required fields in the property form, organized into logical sections.
+  </Step>
+  
+  <Step title="Upload Images">
+    Add high-quality photos of the property and arrange them in the desired order.
+  </Step>
+  
+  <Step title="Review and Submit">
+    Review all information and click "Guardar" to publish your listing.
+  </Step>
+</Steps>
+
+## Basic Information
+
+The first section captures essential property details.
+
+### Required Fields
+
+<ParamField path="title" type="string" required>
+  **Property Title** - Create a compelling, descriptive title
+  
+  Examples:
+  - "Casa 3 Dormitorios con Jardín - Barrio Cerrado"
+  - "Departamento 2 Ambientes Luminoso - Centro"
+  - "Terreno 500m² - Zona Residencial"
+</ParamField>
+
+<ParamField path="description" type="string" required>
+  **Description** - Provide a detailed description of the property
+  
+  Include:
+  - Key features and highlights
+  - Condition and recent updates
+  - Neighborhood information
+  - Nearby amenities (schools, shopping, transport)
+</ParamField>
+
+<ParamField path="propertyType" type="select" required>
+  **Property Type** - Select from available options loaded from the database
+  
+  Options include: Casa, Departamento, PH, Terreno, Local, Galpón, Oficina, Campo, Depósito, Bodega, Consultorio, Fondo de comercio, Hotel, Cochera
+</ParamField>
+
+<ParamField path="propertySubtype" type="select">
+  **Property Subtype** - Optional, appears after selecting property type
+  
+  Subtypes are dynamically loaded based on the selected property type for more specific categorization.
+</ParamField>
+
+<ParamField path="operationType" type="select" required>
+  **Operation Type** - How the property will be transacted
+  
+  Options: Venta, Alquiler, Alquiler Temporal, Permuta
+</ParamField>
+
+<ParamField path="status" type="select" required>
+  **Status** - Current listing status
+  
+  Options:
+  - **Activo**: Publicly visible and active
+  - **Pendiente**: Not yet published
+  - **Reservado**: Reserved by a potential buyer
+  - **Vendido**: Sold (archived)
+  - **Alquilado**: Rented (archived)
+  - **Pausado**: Temporarily hidden from public view
+</ParamField>
+
+<Tip>
+  Set status to "Pendiente" while preparing the listing, then change to "Activo" when ready to publish.
+</Tip>
+
+## Pricing Information
+
+<ParamField path="price" type="number" required>
+  **Price** - The current asking price
+  
+  - Automatically formatted with thousands separator (e.g., 150.000)
+  - Must be greater than 0
+  - Used for search filtering and sorting
+</ParamField>
+
+<ParamField path="currency" type="select" required>
+  **Currency** - Price currency
+  
+  Options: ARS (Pesos Argentinos), USD (US Dollars), EUR (Euros)
+</ParamField>
+
+<ParamField path="originalPrice" type="number">
+  **Original Price** - If the property has been discounted
+  
+  When set higher than current price:
+  - Displays a strikethrough original price
+  - Shows discount percentage badge
+  - Highlights the deal to potential buyers
+</ParamField>
+
+<ParamField path="expenses" type="number">
+  **Monthly Expenses** - Condominium fees, HOA dues, etc.
+  
+  Important for renters and buyers to calculate total monthly costs.
+</ParamField>
+
+<Note>
+  If you're editing a property and change the price, the system automatically saves the previous price as "originalPrice" to show price history.
+</Note>
+
+## Property Specifications
+
+Provide detailed measurements and features.
+
+### Surface Areas
+
+- **Covered Surface (m²)**: Interior living space
+- **Uncovered Surface (m²)**: Exterior areas like terraces, balconies
+- **Lot Size (m²)**: Total land area (for houses/land)
+
+### Room Configuration
+
+- **Rooms**: Total number of rooms
+- **Bedrooms**: Number of bedrooms
+- **Bathrooms**: Number of bathrooms
+- **Garage Spaces**: Parking spots included
+
+### Additional Details
+
+- **Year Built**: Construction year
+- **Condition**: Excellent, Very Good, Good, To Renovate, Under Construction
+- **Floor**: Floor number (for apartments)
+
+<Warning>
+  Accurate specifications are crucial for search filters. Double-check all measurements before publishing.
+</Warning>
+
+## Features and Amenities
+
+### Pre-defined Features (Checkboxes)
+
+Select all that apply:
+
+**Standard Amenities:**
+- Balcón (Balcony)
+- Terraza (Terrace)
+- Lavadero (Laundry room)
+- Jardín (Garden)
+- Acepta mascotas (Pets allowed)
+
+**Special Features:**
+- Oportunidad (Great opportunity)
+- Crédito Hipotecario (Mortgage available)
+- Apto profesional (Suitable for professional use)
+- Acepta permuta (Accepts trade-in)
+- Amoblado (Furnished)
+- Dueño directo (Direct from owner)
+
+### Custom Characteristics
+
+Add unlimited custom features:
+
+1. Type a feature in the "Características adicionales" field
+2. Press Enter or comma to add it
+3. Remove by clicking the X on the feature badge
+4. Maximum 150 characters per feature
+
+<Tip>
+  Custom features appear alongside pre-defined ones on the property detail page. Use them for unique amenities like "Piscina climatizada" or "Sistema de seguridad".
+</Tip>
+
+## Location Information
+
+Accurate location details help buyers find your property.
+
+### Address Fields
+
+<ParamField path="street" type="string" required>
+  **Street Name** - Main street address
+</ParamField>
+
+<ParamField path="streetNumber" type="string">
+  **Street Number** - Building/house number
+</ParamField>
+
+<ParamField path="floorApartment" type="string">
+  **Floor/Apartment** - Unit identifier (e.g., "3° A", "PB 2")
+</ParamField>
+
+<ParamField path="neighborhood" type="string">
+  **Neighborhood** - Local neighborhood or area name
+</ParamField>
+
+<ParamField path="city" type="string" required>
+  **City** - City name
+</ParamField>
+
+<ParamField path="province" type="string" required>
+  **Province** - State or province
+</ParamField>
+
+<ParamField path="postalCode" type="string">
+  **Postal Code** - ZIP or postal code
+</ParamField>
+
+### Address Autocomplete
+
+Use the address autocomplete feature (AddressAutocomplete component) to:
+- Automatically fill in address fields
+- Get accurate coordinates for the map
+- Ensure consistent formatting
+
+### Map Pin Adjustment
+
+After entering the address:
+
+1. Click "Mostrar mapa" to display the interactive map
+2. Drag the red pin to the exact property location
+3. Fine-tune coordinates for accurate positioning
+4. The map updates the latitude/longitude automatically
+
+<Note>
+  Coordinates are used to display the property on map-based searches and in the property detail page map.
+</Note>
+
+## Image Management
+
+High-quality images are essential for attracting potential buyers.
+
+### Adding Images
+
+<Steps>
+  <Step title="Click 'Agregar Imágenes'">
+    Open the file picker to select images from your device.
+  </Step>
+  
+  <Step title="Select Photos">
+    Choose multiple images at once (max 20 new images per upload).
+    
+    Requirements:
+    - Format: JPG, PNG, WebP
+    - Max size: 20MB per file
+    - Recommended: High resolution, well-lit photos
+  </Step>
+  
+  <Step title="Preview and Arrange">
+    Images appear as thumbnails that you can drag to reorder.
+  </Step>
+  
+  <Step title="Set Main Image">
+    Click the star icon on the image that should be the property's primary photo.
+  </Step>
+</Steps>
+
+### Image Operations
+
+**Reordering Images:**
+- Drag and drop images to rearrange (uses @dnd-kit/core)
+- First image is automatically the main image
+- Order determines gallery display sequence
+
+**Rotating Images:**
+- Click the rotate icon to rotate 90° clockwise
+- Rotation state is saved and applied when the property is saved
+- Available for both new and existing images
+
+**Setting Main Image:**
+- Click the star icon on any image
+- Main image appears in property cards and search results
+- Can be different from the first image in the gallery
+
+**Deleting Images:**
+- Click the trash icon on existing images to mark for deletion
+- Marked images show a red overlay until saved
+- Changes are applied when you save the property
+
+<Warning>
+  Always include at least one high-quality image. Properties without images perform poorly in search results and get fewer inquiries.
+</Warning>
+
+### Image Best Practices
+
+1. **Use Professional Photos**: Well-lit, high-resolution images
+2. **Show Key Areas**: Living room, bedrooms, kitchen, bathrooms, exterior
+3. **Highlight Features**: Pool, garden, views, unique amenities
+4. **Correct Order**: Start with the most impressive photo
+5. **Consistent Lighting**: Avoid mixing day and night photos
+
+## YouTube Virtual Tour
+
+Add a virtual tour or property video:
+
+<ParamField path="youtubeVideoUrl" type="string">
+  **YouTube Video URL** - Full URL to a YouTube video
+  
+  Example: `https://www.youtube.com/watch?v=VIDEO_ID`
+  
+  The video will be embedded on the property detail page for immersive viewing.
+</ParamField>
+
+<Tip>
+  Virtual tours significantly increase engagement. Consider creating a walkthrough video or 360° tour.
+</Tip>
+
+## Saving Your Listing
+
+### Before Saving
+
+Verify all required fields are complete:
+- ✅ Title and description
+- ✅ Property and operation type
+- ✅ Price and currency
+- ✅ Location (street, city, province)
+- ✅ At least one image
+- ✅ Status is set correctly
+
+### Validation Errors
+
+If required fields are missing, you'll see:
+- Red borders around incomplete fields
+- Error messages below each field
+- A summary error at the top of the form
+
+### Success
+
+After successful save:
+- Green success message appears
+- You're redirected to the Admin Panel
+- The property appears in your listings
+- If status is "Activo", it's immediately visible to the public
+
+<Note>
+  Changes to existing properties are reflected immediately. There's no approval process for edits.
+</Note>
+
+## Editing Existing Listings
+
+From the Admin Panel:
+
+1. Find the property you want to edit
+2. Click the blue **Edit** icon (pencil)
+3. Modify any fields as needed
+4. Manage existing images (delete, reorder, rotate)
+5. Add new images if needed
+6. Click "Guardar" to save changes
+
+### Editing Images
+
+When editing:
+- Existing images appear with metadata (order, main status)
+- Mark images for deletion with the trash icon
+- Reorder by dragging
+- Add new images alongside existing ones
+- Set a different main image
+
+### Price Updates
+
+When changing the price:
+- The previous price is automatically saved as "originalPrice"
+- Creates a discount display if new price is lower
+- Price history helps buyers see value
+
+## Common Tasks
+
+<AccordionGroup>
+  <Accordion title="Creating a Sale Listing">
+    1. Set Operation Type to "Venta"
+    2. Enter the sale price in appropriate currency
+    3. Include all property specifications
+    4. Add high-quality photos of all areas
+    5. Set status to "Activo" when ready
+  </Accordion>
+  
+  <Accordion title="Creating a Rental Listing">
+    1. Set Operation Type to "Alquiler"
+    2. Enter monthly rent price
+    3. Add monthly expenses in the expenses field
+    4. Include rental terms in description
+    5. Specify if furnished (Amoblado checkbox)
+    6. Note if pets are allowed
+  </Accordion>
+  
+  <Accordion title="Marking Property as Reserved">
+    1. Edit the property
+    2. Change status from "Activo" to "Reservado"
+    3. Save changes
+    4. Property remains visible but shows "Reservado" badge
+  </Accordion>
+  
+  <Accordion title="Temporarily Hiding a Listing">
+    1. Edit the property
+    2. Change status to "Pausado"
+    3. Save changes
+    4. Property is removed from public listings
+    5. Change back to "Activo" to republish
+  </Accordion>
+  
+  <Accordion title="Adding a Discount Promotion">
+    1. Edit the property
+    2. Enter the original price in "Original Price" field
+    3. Update "Price" to the discounted amount
+    4. Save changes
+    5. Property displays with discount percentage badge
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<Accordion title="Images Not Uploading">
+  Check:
+  - File size is under 20MB per image
+  - File format is JPG, PNG, or WebP
+  - You're not exceeding 20 images per upload
+  - Browser has stable internet connection
+</Accordion>
+
+<Accordion title="Form Won't Submit">
+  Verify:
+  - All required fields are filled (marked with *)
+  - Price is greater than 0
+  - At least one image is uploaded
+  - No red validation errors are showing
+</Accordion>
+
+<Accordion title="Coordinates Not Accurate">
+  Solutions:
+  - Use the address autocomplete feature
+  - Manually drag the map pin to correct location
+  - Ensure street address is complete and accurate
+</Accordion>

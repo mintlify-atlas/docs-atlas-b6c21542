@@ -1,0 +1,299 @@
+---
+title: API Overview
+description: Understanding the Inmobiliaria Web REST API structure, configuration, and usage patterns
+---
+
+## Introduction
+
+The Inmobiliaria Web API is a RESTful API built with Express.js that provides comprehensive property management, user authentication, and administrative functionality. The API uses JSON for request and response payloads and supports cookie-based authentication via Better Auth.
+
+## Base URL Configuration
+
+The API base URL is determined dynamically based on the environment:
+
+<CodeGroup>
+```typescript src/lib/api.ts
+const getApiBase = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  if (import.meta.env.PROD) {
+    return "http://localhost:10000/api";
+  }
+
+  return "http://localhost:10000/api";
+};
+
+export const API_BASE = getApiBase();
+export const API_ORIGIN = API_BASE.startsWith("http")
+  ? API_BASE.replace(/\/api\/?$/, "")
+  : window.location.origin;
+```
+</CodeGroup>
+
+<Note>
+Set the `VITE_API_URL` environment variable to override the default API base URL in production environments.
+</Note>
+
+## API Client
+
+All API requests are made through a centralized `apiCall` function that handles:
+
+- **Automatic credentials**: Includes cookies for session authentication
+- **Content-Type negotiation**: Automatically sets headers based on request body type
+- **Error handling**: Parses and throws descriptive errors
+- **Response validation**: Ensures JSON responses are returned
+
+### Request Format
+
+<CodeGroup>
+```typescript Example Request
+const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+  const url = `${API_BASE}${endpoint}`;
+
+  const isFormDataBody = options.body instanceof FormData;
+  const mergedHeaders: HeadersInit = {
+    ...(isFormDataBody ? {} : { "Content-Type": "application/json" }),
+    ...(options.headers || {}),
+  };
+
+  const response = await fetch(url, {
+    credentials: "include",
+    ...options,
+    headers: mergedHeaders,
+  });
+
+  // Error handling and response parsing...
+};
+```
+</CodeGroup>
+
+<Warning>
+All requests automatically include `credentials: "include"` to send session cookies. Ensure your API server has proper CORS configuration to accept credentials.
+</Warning>
+
+### Response Format
+
+All API responses follow a consistent structure:
+
+<CodeGroup>
+```typescript Success Response
+{
+  "success": true,
+  "data": { /* response data */ },
+  "message": "Optional success message"
+}
+```
+
+```typescript Paginated Response
+{
+  "success": true,
+  "data": [ /* array of items */ ],
+  "pagination": {
+    "currentPage": 1,
+    "totalPages": 5,
+    "totalItems": 47,
+    "limit": 10
+  }
+}
+```
+
+```typescript Error Response
+{
+  "success": false,
+  "message": "Error description",
+  "error": "ERROR_CODE"
+}
+```
+</CodeGroup>
+
+## Error Handling
+
+The API client implements comprehensive error handling:
+
+<Steps>
+  <Step title="HTTP Status Check">
+    Validates that the response status is in the 2xx range
+  </Step>
+  
+  <Step title="Error Parsing">
+    Attempts to parse error response as JSON, falls back to plain text
+  </Step>
+  
+  <Step title="Error Throwing">
+    Throws a JavaScript Error with the parsed error message
+  </Step>
+</Steps>
+
+<CodeGroup>
+```typescript Error Handling
+if (!response.ok) {
+  const errorText = await response.text();
+  console.error(`🚨 API Error ${response.status}:`, errorText);
+
+  let error;
+  try {
+    error = JSON.parse(errorText);
+  } catch {
+    error = { message: errorText || `HTTP ${response.status}` };
+  }
+
+  throw new Error(error.message || `HTTP ${response.status}`);
+}
+```
+</CodeGroup>
+
+### Common Error Codes
+
+| Status Code | Description | Common Causes |
+|------------|-------------|---------------|
+| 400 | Bad Request | Invalid request data, missing required fields |
+| 401 | Unauthorized | Missing or invalid session cookie |
+| 403 | Forbidden | Insufficient permissions for the requested resource |
+| 404 | Not Found | Resource does not exist |
+| 500 | Internal Server Error | Server-side error, check server logs |
+
+## API Namespaces
+
+The API is organized into the following namespaces:
+
+### Properties
+
+Manage property listings, including creation, updates, and filtering.
+
+- `GET /properties` - List properties with optional filters
+- `GET /properties/:id` - Get property by ID
+- `GET /properties/slug/:slug` - Get property by URL slug
+- `POST /properties` - Create new property (requires authentication)
+- `PUT /properties/:id` - Update property (requires authentication)
+- `DELETE /properties/:id` - Delete property (requires authentication)
+- `POST /properties/:id/favorite` - Add property to favorites
+- `DELETE /properties/:id/favorite` - Remove property from favorites
+
+<Note>
+Property creation and updates accept `FormData` to support image uploads. The API client automatically handles Content-Type headers for multipart requests.
+</Note>
+
+### Users
+
+Manage user profiles and favorites.
+
+- `GET /users/profile` - Get current user profile (requires authentication)
+- `PUT /users/profile` - Update user profile (requires authentication)
+- `GET /users/favorites` - Get user's favorite properties (requires authentication)
+
+### Admin
+
+Administrative operations for managing users and properties.
+
+- `GET /admin/stats` - Get dashboard statistics (requires admin role)
+- `GET /admin/properties` - List all properties (requires admin role)
+- `GET /admin/users` - List all users (requires admin role)
+- `PUT /admin/users/:id/role` - Update user role (requires admin role)
+- `PUT /admin/properties/:id/status` - Update property status (requires admin role)
+- `POST /admin/create-admin` - Create new admin user (requires admin role)
+
+<Warning>
+All admin endpoints require authentication with the `admin` role. Unauthorized requests will return a 403 Forbidden response.
+</Warning>
+
+### Metadata
+
+Retrieve system metadata for property types, features, tags, and more.
+
+- `GET /metadata/all` - Get all metadata in one request
+- `GET /metadata/property-types` - Get available property types
+- `GET /metadata/property-subtypes` - Get property subtypes (optionally filtered by type)
+- `GET /metadata/operation-types` - Get operation types (sale, rent, etc.)
+- `GET /metadata/property-statuses` - Get available property statuses
+- `GET /metadata/currencies` - Get supported currencies
+- `GET /metadata/features` - Get available property features
+- `GET /metadata/tags` - Get available tags
+- `GET /metadata/conditions` - Get property condition options
+
+### Contact
+
+Handle contact form submissions and appraisal requests.
+
+- `POST /contact/appraisal` - Submit property appraisal or contact request
+
+## Usage Example
+
+Here's how to use the API client in your application:
+
+<CodeGroup>
+```typescript List Properties
+import { api } from '@/lib/api';
+
+// List all properties
+const properties = await api.properties.list();
+
+// List with filters
+const filteredProperties = await api.properties.list({
+  propertyType: ['casa', 'departamento'],
+  listingType: ['venta'],
+  minPrice: 100000,
+  maxPrice: 500000,
+  bedrooms: 3,
+  page: 1,
+  limit: 20
+});
+```
+
+```typescript Create Property
+import { api } from '@/lib/api';
+
+const formData = new FormData();
+formData.append('title', 'Beautiful House');
+formData.append('description', 'A spacious family home');
+formData.append('price', '250000');
+// Add images
+formData.append('images', imageFile1);
+formData.append('images', imageFile2);
+
+const newProperty = await api.properties.create(formData);
+```
+
+```typescript Get User Profile
+import { api } from '@/lib/api';
+
+try {
+  const profile = await api.users.getProfile();
+  console.log('User:', profile.data);
+} catch (error) {
+  console.error('Not authenticated:', error.message);
+}
+```
+
+```typescript Get Metadata
+import { api } from '@/lib/api';
+
+// Get all metadata at once
+const metadata = await api.metadata.getAll();
+
+// Or fetch specific metadata
+const propertyTypes = await api.metadata.getPropertyTypes();
+const features = await api.metadata.getFeatures();
+```
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/api/authentication">
+    Learn how to authenticate users with Better Auth
+  </Card>
+  
+  <Card title="Properties" icon="building" href="/api/properties">
+    Explore property management endpoints
+  </Card>
+  
+  <Card title="Users" icon="users" href="/api/users">
+    Manage user profiles and preferences
+  </Card>
+  
+  <Card title="Admin" icon="shield" href="/api/admin">
+    Administrative operations and dashboard
+  </Card>
+</CardGroup>

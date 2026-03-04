@@ -1,0 +1,209 @@
+---
+title: Browsing Properties
+description: Learn how to search, filter, and find your perfect property on Inmobiliaria Web
+---
+
+# Browsing Properties
+
+Find your ideal property by using our powerful search and filtering tools. The listings page provides multiple ways to discover properties that match your needs.
+
+## Getting Started
+
+Navigate to the Properties page to view all available listings. You'll see a grid of property cards displaying key information like price, location, and property type.
+
+<Steps>
+  <Step title="Access the Listings Page">
+    Click on "Propiedades" in the main navigation menu to view all available properties.
+  </Step>
+  
+  <Step title="Browse Available Properties">
+    Scroll through the grid view to see property listings with images, prices, and basic details.
+  </Step>
+  
+  <Step title="Use Search and Filters">
+    Refine your search using the search bar and filter sidebar to find properties matching your criteria.
+  </Step>
+</Steps>
+
+## Using the Search Bar
+
+The search bar supports intelligent natural language queries to help you find properties quickly.
+
+<Note>
+  The search feature supports flexible queries like "casa 3 dormitorios venta" or "departamento alquiler centro" to instantly filter results.
+</Note>
+
+### Search Capabilities
+
+- **Property Type**: Search by type like "casa", "departamento", "terreno"
+- **Operation Type**: Include "venta" or "alquiler" in your query
+- **Location**: Search by neighborhood, city, or address
+- **Price Range**: Use terms like "bajo $100000" or "entre 50000 y 100000"
+- **Bedrooms**: Include bedroom count like "2 dormitorios" or "3 habitaciones"
+
+### How Search Works
+
+The system parses your query (see `parseQueryToFilters` in ListingsPage.tsx:163-177) and applies filters automatically:
+
+```typescript
+// Search query examples:
+"casa 3 dormitorios venta"
+"departamento alquiler bajo $50000"
+"terreno zona norte"
+```
+
+<Tip>
+  Press Enter after typing your search query or click the "Filtros" button to see advanced filtering options.
+</Tip>
+
+## Using Filters
+
+The filter sidebar provides detailed options to narrow down your property search.
+
+### Opening Filters
+
+- **Desktop**: The filter sidebar is always visible on the left side
+- **Mobile**: Tap the "Filtros" button in the header to open the filter panel
+
+### Available Filters
+
+<AccordionGroup>
+  <Accordion title="Property Type (Tipo de Propiedad)">
+    Select one or multiple property types:
+    - Casa (House)
+    - Departamento (Apartment)
+    - Terreno (Land)
+    - Local (Commercial space)
+    - And more
+    
+    Multiple selections work as "OR" - properties matching any selected type will be shown.
+  </Accordion>
+  
+  <Accordion title="Operation Type (Tipo de Operación)">
+    Choose the transaction type you're interested in:
+    - Venta (Sale)
+    - Alquiler (Rent)
+    - Alquiler Temporal (Temporary rent)
+    
+    You can select multiple operation types to see all matching properties.
+  </Accordion>
+  
+  <Accordion title="Bedrooms (Dormitorios)">
+    Filter by minimum number of bedrooms. Click a number to see properties with that many bedrooms or more.
+    
+    Options: 1+, 2+, 3+, 4+, 5+
+  </Accordion>
+  
+  <Accordion title="Bathrooms (Baños)">
+    Filter by minimum number of bathrooms. Click a number to see properties with that many bathrooms or more.
+    
+    Options: 1+, 2+, 3+, 4+
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  Applying too many filters simultaneously might result in no properties being found. Try removing some filters if you see "No se encontraron propiedades".
+</Warning>
+
+## Active Filters Display
+
+When filters are applied, you'll see filter badges below the search bar showing:
+
+- Current search query
+- Selected property types
+- Selected operation types
+- Price range (if set)
+- Bedroom/bathroom counts
+- Location filters
+
+### Removing Individual Filters
+
+Click the **X** icon on any filter badge to remove that specific filter without affecting others.
+
+### Clearing All Filters
+
+Click the "Limpiar todo" (Clear all) button to reset all filters and see the full property listing.
+
+## Understanding Property Cards
+
+Each property card in the grid displays:
+
+- **Main Photo**: The primary property image
+- **Title**: Property name or description
+- **Location**: Street address and city (from PropertyCard component)
+- **Price**: Current price in the selected currency (ARS, USD, EUR)
+- **Property Details**: Type, operation type, bedrooms, bathrooms
+- **Special Badges**: "Oportunidad", discount percentage (if applicable)
+
+<Note>
+  Properties with an original price higher than the current price will show a discount badge with the percentage saved.
+</Note>
+
+## Viewing Property Details
+
+Click on any property card to view the full property details page, which includes:
+
+- Complete photo gallery
+- Detailed description
+- Full specifications (covered area, lot size, amenities)
+- Location map
+- Contact form
+- YouTube virtual tour (if available)
+
+## Results Information
+
+The page header shows:
+- Total number of properties found: "X propiedades encontradas"
+- Current filters applied
+- Loading state while fetching results
+
+### Empty States
+
+<Accordion title="No Properties Found">
+  If your search returns no results, you'll see:
+  - A message: "No se encontraron propiedades"
+  - Suggestion: "Intenta ajustar tus criterios de filtros"
+  - A button to clear all filters and start over
+</Accordion>
+
+<Accordion title="Loading State">
+  While properties are being fetched:
+  - A spinning loader icon appears
+  - Message: "Cargando propiedades..."
+  - The page remains interactive
+</Accordion>
+
+## Mobile Experience
+
+On mobile devices (screens < 768px):
+
+- Properties display in a single-column grid for better readability
+- Filter sidebar slides in from the left when opened
+- Close filters by tapping the X button or tapping outside the panel
+- Search bar is full-width for easier typing
+- Filter badges wrap to multiple lines
+
+<Tip>
+  The view automatically switches to grid mode on mobile for the best browsing experience.
+</Tip>
+
+## Best Practices
+
+1. **Start Broad**: Begin with fewer filters and gradually narrow down
+2. **Use Search First**: Try the intelligent search bar before opening detailed filters
+3. **Save Favorite Searches**: Bookmark specific filter combinations in your browser
+4. **Check Regularly**: New properties are added frequently, so check back often
+5. **Contact Early**: Popular properties get contacted quickly - reach out as soon as you find a match
+
+## URL Sharing
+
+Filters are automatically saved in the URL (see ListingsPage.tsx:52-75), allowing you to:
+
+- Share specific searches with others
+- Bookmark your favorite property searches
+- Use browser back/forward buttons without losing your filters
+- Return to the same search results later
+
+<Note>
+  The URL updates automatically as you apply or remove filters, making it easy to share your exact search with friends or family.
+</Note>

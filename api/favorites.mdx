@@ -1,0 +1,512 @@
+---
+title: Favorites API
+description: Complete guide to managing user favorites for properties
+---
+
+## Overview
+
+The Favorites functionality allows authenticated users to save properties they're interested in. Favorites are managed through a combination of the Properties API and Users API.
+
+<Note>
+All favorites operations require authentication. Users can only manage their own favorites.
+</Note>
+
+---
+
+## How Favorites Work
+
+Favorites are stored in the `user_favorites` table, creating a many-to-many relationship between users and properties. The system provides three main operations:
+
+1. **Add to favorites** - Add a property to your favorites
+2. **Remove from favorites** - Remove a property from your favorites
+3. **Get favorites list** - Retrieve all favorited property IDs
+
+---
+
+## Add Property to Favorites
+
+<CodeGroup>
+```typescript POST /properties/:id/favorite
+const response = await api.properties.addToFavorites("123");
+```
+</CodeGroup>
+
+Add a property to the authenticated user's favorites list.
+
+### Endpoint
+
+`POST /api/properties/:id/favorite`
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The property ID to add to favorites
+</ParamField>
+
+### Authentication
+
+Requires valid session cookie. Returns 401 if not authenticated.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the property was added to favorites
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "message": "Property added to favorites"
+}
+```
+
+### Usage Example
+
+From `src/contexts/AuthContext.tsx:336`:
+
+```typescript
+const toggleFavorite = async (propertyId: string) => {
+  if (!user) {
+    toast.error("Debes iniciar sesión para guardar favoritos");
+    return;
+  }
+
+  const isFavorite = favoriteIds.includes(propertyId);
+
+  if (!isFavorite) {
+    await api.properties.addToFavorites(propertyId);
+    setFavoriteIds((prev) => [...prev, propertyId]);
+    toast.success("Agregado a favoritos");
+  } else {
+    // Remove from favorites...
+  }
+};
+```
+
+### Error Responses
+
+<CodeGroup>
+```json UNAUTHORIZED
+{
+  "message": "Authentication required",
+  "code": "UNAUTHORIZED"
+}
+```
+
+```json NOT_FOUND
+{
+  "message": "Property not found",
+  "code": "NOT_FOUND"
+}
+```
+
+```json ALREADY_FAVORITED
+{
+  "message": "Property is already in favorites",
+  "code": "ALREADY_FAVORITED"
+}
+```
+</CodeGroup>
+
+---
+
+## Remove Property from Favorites
+
+<CodeGroup>
+```typescript DELETE /properties/:id/favorite
+const response = await api.properties.removeFromFavorites("123");
+```
+</CodeGroup>
+
+Remove a property from the authenticated user's favorites list.
+
+### Endpoint
+
+`DELETE /api/properties/:id/favorite`
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The property ID to remove from favorites
+</ParamField>
+
+### Authentication
+
+Requires valid session cookie. Returns 401 if not authenticated.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the property was removed from favorites
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "message": "Property removed from favorites"
+}
+```
+
+### Usage Example
+
+From `src/contexts/AuthContext.tsx:349`:
+
+```typescript
+const toggleFavorite = async (propertyId: string) => {
+  if (!user) {
+    toast.error("Debes iniciar sesión para guardar favoritos");
+    return;
+  }
+
+  const isFavorite = favoriteIds.includes(propertyId);
+
+  if (isFavorite) {
+    await api.properties.removeFromFavorites(propertyId);
+    setFavoriteIds((prev) => prev.filter((id) => id !== propertyId));
+    toast.success("Eliminado de favoritos");
+  } else {
+    // Add to favorites...
+  }
+};
+```
+
+---
+
+## Get User's Favorites
+
+<CodeGroup>
+```typescript GET /users/favorites
+const response = await api.users.getFavorites();
+```
+</CodeGroup>
+
+Retrieve all property IDs favorited by the authenticated user.
+
+### Endpoint
+
+`GET /api/users/favorites`
+
+### Authentication
+
+Requires valid session cookie. Returns 401 if not authenticated.
+
+### Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="string[]" required>
+  Array of property IDs
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": ["123", "456", "789"]
+}
+```
+
+### Usage Example
+
+From `src/contexts/AuthContext.tsx:66`:
+
+```typescript
+useEffect(() => {
+  const loadFavorites = async () => {
+    if (user) {
+      try {
+        const favoritesResponse = await api.users.getFavorites();
+        setFavoriteIds(favoritesResponse.data || []);
+      } catch (error) {
+        console.error("Error loading favorites:", error);
+      }
+    }
+  };
+
+  loadFavorites();
+}, [user]);
+```
+
+---
+
+## Complete Favorites Implementation
+
+### Full Context Example
+
+Here's a complete implementation of favorites management from the codebase:
+
+```typescript
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+
+  // Load favorites when user logs in
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (user) {
+        try {
+          const favoritesResponse = await api.users.getFavorites();
+          setFavoriteIds(favoritesResponse.data || []);
+        } catch (error) {
+          console.error("Error loading favorites:", error);
+        }
+      } else {
+        setFavoriteIds([]);
+      }
+    };
+
+    loadFavorites();
+  }, [user]);
+
+  // Toggle favorite status
+  const toggleFavorite = async (propertyId: string) => {
+    if (!user) {
+      toast.error("Debes iniciar sesión para guardar favoritos");
+      return;
+    }
+
+    const isFavorite = favoriteIds.includes(propertyId);
+
+    try {
+      if (isFavorite) {
+        await api.properties.removeFromFavorites(propertyId);
+        setFavoriteIds((prev) => prev.filter((id) => id !== propertyId));
+        toast.success("Eliminado de favoritos");
+      } else {
+        await api.properties.addToFavorites(propertyId);
+        setFavoriteIds((prev) => [...prev, propertyId]);
+        toast.success("Agregado a favoritos");
+      }
+    } catch (error) {
+      toast.error("Error al actualizar favoritos");
+      console.error("Favorite toggle error:", error);
+    }
+  };
+
+  // Check if property is favorited
+  const isFavorite = (propertyId: string) => {
+    return favoriteIds.includes(propertyId);
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        favoriteIds,
+        toggleFavorite,
+        isFavorite,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+```
+
+### Displaying Favorites Page
+
+From `src/pages/FavoritesPage.tsx:28`:
+
+```typescript
+const FavoritesPage = () => {
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFavorites = async () => {
+      try {
+        // Get favorite property IDs
+        const favoritesResponse = await api.users.getFavorites();
+        const favoriteIds = favoritesResponse.data || [];
+
+        if (favoriteIds.length === 0) {
+          setProperties([]);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch full property details for each favorite
+        const propertiesData = await Promise.all(
+          favoriteIds.map((id) =>
+            api.properties.get(String(id)).catch(() => {
+              console.error(`Failed to fetch property ${id}`);
+              return null;
+            })
+          )
+        );
+
+        // Filter out failed requests
+        const validProperties = propertiesData
+          .filter((p) => p !== null)
+          .map((p) => p.data);
+
+        setProperties(validProperties);
+      } catch (error) {
+        console.error("Error loading favorites:", error);
+        toast.error("Error al cargar favoritos");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFavorites();
+  }, []);
+
+  if (loading) return <LoadingSpinner />;
+  if (properties.length === 0) return <EmptyState />;
+
+  return (
+    <div>
+      {properties.map((property) => (
+        <PropertyCard key={property.id} property={property} />
+      ))}
+    </div>
+  );
+};
+```
+
+---
+
+## UI Integration
+
+### Favorite Button Component
+
+```typescript
+interface FavoriteButtonProps {
+  propertyId: string;
+  className?: string;
+}
+
+const FavoriteButton = ({ propertyId, className }: FavoriteButtonProps) => {
+  const { isFavorite, toggleFavorite, user } = useAuth();
+  const favorite = isFavorite(propertyId);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite(propertyId);
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className={`favorite-btn ${favorite ? 'active' : ''} ${className}`}
+      aria-label={favorite ? 'Remove from favorites' : 'Add to favorites'}
+    >
+      {favorite ? <HeartFilledIcon /> : <HeartOutlineIcon />}
+    </button>
+  );
+};
+```
+
+---
+
+## Database Schema
+
+The favorites functionality uses the `user_favorites` table:
+
+```sql
+CREATE TABLE user_favorites (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    property_id INTEGER REFERENCES properties(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, property_id)
+);
+```
+
+**Key Features:**
+- Cascade deletion: If a user or property is deleted, favorites are automatically removed
+- Unique constraint: Prevents duplicate favorites
+- Indexed for fast lookup
+
+---
+
+## Best Practices
+
+### Optimistic UI Updates
+
+Update the UI immediately before the API call completes:
+
+```typescript
+const toggleFavorite = async (propertyId: string) => {
+  // Update UI immediately
+  const wasFavorite = isFavorite(propertyId);
+  if (wasFavorite) {
+    setFavoriteIds((prev) => prev.filter((id) => id !== propertyId));
+  } else {
+    setFavoriteIds((prev) => [...prev, propertyId]);
+  }
+
+  try {
+    // Make API call
+    if (wasFavorite) {
+      await api.properties.removeFromFavorites(propertyId);
+    } else {
+      await api.properties.addToFavorites(propertyId);
+    }
+  } catch (error) {
+    // Revert on error
+    if (wasFavorite) {
+      setFavoriteIds((prev) => [...prev, propertyId]);
+    } else {
+      setFavoriteIds((prev) => prev.filter((id) => id !== propertyId));
+    }
+    toast.error("Error updating favorites");
+  }
+};
+```
+
+### Handle Unauthenticated Users
+
+Always check authentication before allowing favorite operations:
+
+```typescript
+const toggleFavorite = async (propertyId: string) => {
+  if (!user) {
+    toast.error("Debes iniciar sesión para guardar favoritos");
+    navigate('/auth');
+    return;
+  }
+  // Continue with favorite operation...
+};
+```
+
+### Cache Favorites Locally
+
+Load favorites once at login and maintain in memory:
+
+```typescript
+useEffect(() => {
+  if (user) {
+    loadFavorites();
+  } else {
+    setFavoriteIds([]);
+  }
+}, [user]);
+```
+
+---
+
+## Related Documentation
+
+- [Properties API](/api/properties) - Property management endpoints
+- [Users API](/api/users) - User profile and favorites endpoints
+- [Authentication](/api/authentication) - User authentication flow
