@@ -1,0 +1,144 @@
+{
+  "projectType": "saas",
+  "projectName": "Inmobiliaria Web",
+  "projectDescription": "A full-stack real estate platform for listing, searching, and managing property sales and rentals",
+  "theme": "almond",
+  "primaryColor": "#2563eb",
+  "lightColor": "#3b82f6",
+  "darkColor": "#1e40af",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/property-listings",
+              "features/search-functionality",
+              "features/user-authentication",
+              "features/favorites",
+              "features/property-management"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "guides/browsing-properties",
+              "guides/creating-listings",
+              "guides/managing-account",
+              "guides/admin-panel"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "components/property-card",
+              "components/search-bar",
+              "components/filters",
+              "components/maps",
+              "components/image-gallery"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/properties",
+              "api/users",
+              "api/metadata",
+              "api/favorites",
+              "api/admin"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Setup",
+            "pages": [
+              "development/environment-setup",
+              "development/database-schema",
+              "development/configuration"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "development/tech-stack",
+              "development/project-structure",
+              "development/routing"
+            ]
+          },
+          {
+            "group": "Integration",
+            "pages": [
+              "development/better-auth-integration",
+              "development/google-maps-integration",
+              "development/deployment"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Property listing and search with advanced filters",
+    "Multi-field intelligent search with synonyms and autocomplete",
+    "User authentication with Better Auth (email/password and Google OAuth)",
+    "Interactive property maps with Google Maps and Leaflet",
+    "Admin panel for property and user management",
+    "Favorites system for authenticated users",
+    "Drag-and-drop image management for property listings",
+    "Address autocomplete with geolocation",
+    "Responsive design with Tailwind CSS",
+    "Full-text search with PostgreSQL"
+  ],
+  "publicApiSurface": [
+    "GET /api/properties - List properties with filters",
+    "GET /api/properties/:id - Get property by ID",
+    "GET /api/properties/slug/:slug - Get property by URL slug",
+    "POST /api/properties - Create new property",
+    "PUT /api/properties/:id - Update property",
+    "DELETE /api/properties/:id - Delete property",
+    "POST /api/properties/:id/favorite - Add property to favorites",
+    "DELETE /api/properties/:id/favorite - Remove property from favorites",
+    "GET /api/users/profile - Get user profile",
+    "PUT /api/users/profile - Update user profile",
+    "GET /api/users/favorites - Get user's favorite properties",
+    "GET /api/metadata/all - Get all metadata (types, subtypes, features, etc.)",
+    "GET /api/metadata/property-types - Get property types",
+    "GET /api/metadata/property-subtypes - Get property subtypes",
+    "GET /api/metadata/operation-types - Get operation types (sale, rent, etc.)",
+    "GET /api/metadata/features - Get available property features",
+    "GET /api/metadata/tags - Get available property tags",
+    "GET /api/admin/stats - Get admin statistics",
+    "GET /api/admin/properties - Get all properties (admin)",
+    "GET /api/admin/users - Get all users (admin)",
+    "PUT /api/admin/users/:id/role - Update user role",
+    "PUT /api/admin/properties/:id/status - Update property status",
+    "POST /api/admin/create-admin - Create admin user",
+    "POST /api/contact/appraisal - Submit property appraisal request"
+  ]
+}
